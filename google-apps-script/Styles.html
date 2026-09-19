@@ -1,0 +1,811 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=Montserrat:wght@800;900&display=swap');
+
+  :root {
+    /* 60% Imperial Black Palette */
+    --bg-main: #0D0D0D;
+    --bg-surface: #141414;
+    --bg-card: #191919;
+    --bg-card-hover: #222222;
+    --border-color: #262626;
+    --border-subtle: #1F1F1F;
+
+    /* 30% Guanandi Golden Yellow Palette */
+    --color-yellow: #FFDE00;
+    --color-yellow-hover: #E5C700;
+    --color-yellow-glow: rgba(255, 222, 0, 0.12);
+    --border-accent: #FFDE00;
+    --accent: #FFDE00;
+
+    /* 10% Supporting: Foam Cream, Hop Green & Draft Amber */
+    --color-cream: #F5EFEB;
+    --color-amber: #F7B500;
+    --color-green: #2F3E2E;
+    --color-green-light: #445942;
+
+    /* Text Legibility */
+    --text-primary: #F5EFEB;
+    --text-secondary: #C5BFB8;
+    --text-muted: #807A75;
+
+    /* Status indicators */
+    --success: #34D399;
+    --danger: #F87171;
+
+    /* Typography Hierarchy */
+    --font-heading: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-specs: 'Barlow Condensed', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 90px;
+  }
+
+  /* App Shell & Header */
+  .app-header {
+    background: #0D0D0D;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 12px 16px;
+  }
+
+  .header-container {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+
+  .brand-logo .logo-icon {
+    width: 34px;
+    height: 34px;
+    background: var(--color-yellow);
+    color: var(--bg-main);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-specs);
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: -0.5px;
+  }
+
+  .brand-title {
+    font-family: var(--font-heading);
+    font-weight: 900;
+    font-size: 1.05rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--color-cream);
+  }
+
+  .brand-subtitle {
+    font-family: var(--font-specs);
+    font-size: 0.75rem;
+    color: var(--color-yellow);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Stepper de Progresso no Topo */
+  .stepper-bar {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .stepper-bar::-webkit-scrollbar { display: none; }
+
+  .stepper-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .step-node {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+    cursor: default;
+  }
+
+  .step-node.active {
+    color: var(--color-yellow);
+    font-weight: 700;
+  }
+
+  .step-node.completed {
+    color: var(--text-primary);
+  }
+
+  .step-bullet {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-specs);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .step-node.active .step-bullet {
+    background: var(--color-yellow);
+    color: var(--bg-main);
+    border-color: var(--color-yellow);
+  }
+
+  .step-node.completed .step-bullet {
+    background: var(--color-green);
+    color: var(--color-cream);
+    border-color: var(--color-green-light);
+  }
+
+  .step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+    min-width: 14px;
+  }
+  .step-line.completed {
+    background: var(--color-yellow);
+  }
+
+  /* Layout Principal */
+  .main-wrapper {
+    max-width: 960px;
+    margin: 20px auto;
+    padding: 0 16px;
+    width: 100%;
+    flex: 1;
+  }
+
+  .grid-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  @media (min-width: 850px) {
+    body { padding-bottom: 20px; }
+    .grid-layout {
+      grid-template-columns: 1fr 320px;
+      align-items: start;
+    }
+  }
+
+  /* Card da Etapa - Compacto & Limpo */
+  .wizard-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 24px;
+  }
+
+  .step-header {
+    margin-bottom: 20px;
+  }
+
+  .step-eyebrow {
+    font-family: var(--font-specs);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-yellow);
+    margin-bottom: 4px;
+  }
+
+  /* Headings contidos, sem exagero de pôster promocional */
+  .step-title {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.3px;
+    color: var(--color-cream);
+    line-height: 1.25;
+  }
+
+  .step-description {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* Cards Compactos de Seleção (Passo 1) */
+  .category-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 500px) {
+    .category-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .selectable-card {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 105px;
+    user-select: none;
+  }
+
+  .selectable-card:hover {
+    border-color: #444;
+    background: var(--bg-card-hover);
+  }
+
+  .selectable-card.selected {
+    border-color: var(--color-yellow);
+    background: rgba(255, 222, 0, 0.05);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .card-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .card-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    transition: all 0.15s ease;
+  }
+
+  .selectable-card.selected .card-checkbox {
+    background: var(--color-yellow);
+    border-color: var(--color-yellow);
+    color: var(--bg-main);
+  }
+
+  .card-label {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin-top: 10px;
+    color: var(--color-cream);
+  }
+
+  .card-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Listagem de Cervejas e Barris (Passo 2) */
+  .beer-item {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    transition: border-color 0.15s ease;
+  }
+
+  .beer-item:hover {
+    border-color: #444;
+  }
+
+  .beer-info {
+    flex: 1;
+  }
+
+  .beer-name {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--color-cream);
+  }
+
+  .beer-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  /* Badge de Torneira / Especificação Técnica */
+  .badge-tap {
+    background: var(--color-yellow);
+    color: var(--bg-main);
+    font-family: var(--font-specs);
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-vol {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    font-family: var(--font-specs);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+
+  .beer-specs-inline {
+    font-family: var(--font-specs);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .beer-price {
+    font-family: var(--font-specs);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-cream);
+  }
+
+  /* Contador de Quantidade [ - ] 1 [ + ] */
+  .qty-counter {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .qty-btn {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    width: 34px;
+    height: 34px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s ease;
+  }
+
+  .qty-btn:active {
+    background: var(--border-color);
+  }
+
+  .qty-value {
+    width: 32px;
+    text-align: center;
+    font-family: var(--font-specs);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-yellow);
+  }
+
+  /* Formulários e Inputs */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--color-yellow);
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Botões Rápidos de Convidados */
+  .guest-chips {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  @media (min-width: 500px) {
+    .guest-chips {
+      grid-template-columns: repeat(8, 1fr);
+    }
+  }
+
+  .chip-btn {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 10px 4px;
+    font-family: var(--font-specs);
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+
+  .chip-btn:hover {
+    border-color: #444;
+  }
+
+  .chip-btn.selected {
+    background: var(--color-yellow);
+    color: var(--bg-main);
+    border-color: var(--color-yellow);
+  }
+
+  /* Resumo Fixo (Sidebar no Desktop / Barra Inferior no Mobile) */
+  .summary-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    position: sticky;
+    top: 80px;
+  }
+
+  .summary-title {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--color-cream);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    margin-bottom: 7px;
+  }
+
+  .summary-row.total {
+    font-family: var(--font-specs);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--color-yellow);
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  /* ========================================================
+     ESTRUTURA DE BLINDAGEM VISUAL:
+     STRUCTURED GOLDEN HEADER BLOCKS & ITEM CHECKLIST
+     (Baseado na Ficha de Locação da Cervejaria Guanandi)
+     ======================================================== */
+  .golden-sheet {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+
+  .golden-block {
+    margin-bottom: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .golden-header-bar {
+    background: var(--color-yellow);
+    color: var(--bg-main);
+    padding: 7px 12px;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .golden-header-bar .tag {
+    background: rgba(13, 13, 13, 0.15);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--font-specs);
+    font-weight: 800;
+    font-size: 0.7rem;
+  }
+
+  .rental-checklist {
+    padding: 10px 12px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.83rem;
+    color: var(--text-primary);
+  }
+
+  .checklist-item .item-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .checklist-item .item-check {
+    color: var(--color-yellow);
+    font-weight: 800;
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+
+  .checklist-item .item-val {
+    font-family: var(--font-specs);
+    font-weight: 700;
+    color: var(--color-cream);
+    white-space: nowrap;
+  }
+
+  /* Barra Fixa Inferior no Mobile */
+  .mobile-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0D0D0D;
+    border-top: 1px solid var(--border-color);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 99;
+  }
+  @media (min-width: 850px) {
+    .mobile-bottom-bar { display: none; }
+  }
+
+  .mobile-total-box {
+    display: flex;
+    flex-direction: column;
+  }
+  .mobile-total-label {
+    font-family: var(--font-specs);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+  .mobile-total-value {
+    font-family: var(--font-specs);
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: var(--color-yellow);
+  }
+
+  /* Botões de Ação - 30% Guanandi Yellow para CTAs */
+  .btn-primary {
+    background: var(--color-yellow);
+    color: var(--bg-main);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px 22px;
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s ease, transform 0.1s ease;
+    text-decoration: none;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-yellow-hover);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 18px;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+  }
+
+  .btn-secondary:hover {
+    color: var(--text-primary);
+    border-color: #555;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .btn-whatsapp {
+    background: #25D366;
+    color: #fff;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 0.88rem;
+    text-transform: uppercase;
+  }
+  .btn-whatsapp:hover {
+    background: #20ba59;
+  }
+
+  .wizard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  /* Alertas e Mensagens */
+  .alert-box {
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: #fca5a5;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.83rem;
+    margin-bottom: 14px;
+    display: none;
+  }
+
+  /* Tela de Sucesso */
+  .success-card {
+    text-align: center;
+    padding: 30px 16px;
+  }
+
+  .success-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(52, 211, 153, 0.15);
+    border: 2px solid var(--success);
+    color: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 16px;
+  }
+
+  .order-number {
+    font-family: var(--font-specs);
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--color-yellow);
+    margin: 8px 0 14px;
+    letter-spacing: 1px;
+  }
+
+  /* Spinner de Carregamento */
+  .spinner {
+    border: 2px solid rgba(13,13,13,0.2);
+    border-top: 2px solid #0D0D0D;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>

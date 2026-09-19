@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Administrativo | Reservas & Gestão Guanandi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+  <?!= include('Styles'); ?>
+  <style>
+    .admin-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      overflow-x: auto;
+    }
+    .admin-tab-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .admin-tab-btn:hover {
+      color: var(--text-primary);
+      border-color: #333;
+    }
+    .admin-tab-btn.active {
+      background: var(--bg-surface);
+      border-color: var(--color-yellow);
+      color: var(--color-yellow);
+    }
+    .status-badge {
+      font-family: var(--font-specs);
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .status-pendente { background: rgba(255, 222, 0, 0.15); color: var(--color-yellow); border: 1px solid rgba(255, 222, 0, 0.3); }
+    .status-confirmada { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .status-paga { background: rgba(247, 181, 0, 0.15); color: var(--color-amber); border: 1px solid rgba(247, 181, 0, 0.3); }
+    .status-cancelada { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .data-table th, .data-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .data-table th {
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      font-family: var(--font-specs);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.8rem;
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .cal-day-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .cal-day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+      font-family: var(--font-specs);
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    .dev-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .dev-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+    }
+    .dev-title {
+      font-family: var(--font-heading);
+      font-size: 0.9rem;
+      font-weight: 900;
+      color: var(--color-yellow);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dev-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.8rem;
+      font-family: var(--font-specs);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-logo">
+        <div class="logo-icon">⚙️</div>
+        <div>
+          <div class="brand-title">Painel de Gestão</div>
+          <div class="brand-subtitle">Cervejaria Guanandi</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span id="activeUserBadge" style="display: none; font-family: var(--font-specs); font-size: 0.75rem; color: var(--color-yellow); background: rgba(255,222,0,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,222,0,0.2);"></span>
+        <button id="logoutBtn" style="display: none; font-size: 0.75rem; padding: 5px 10px;" class="btn-secondary" onclick="doAdminLogout()">Sair</button>
+        <a href="?page=client" class="btn-secondary" style="font-size: 0.8rem; padding: 6px 12px;">Ver App Cliente</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-wrapper" style="max-width: 1200px;">
+
+    <!-- ETAPA 1: TELA DE LOGIN ADMIN (MAX 2 USUÁRIOS) -->
+    <div id="adminLoginSection" class="wizard-card" style="max-width: 440px; margin: 40px auto; text-align: center;">
+      <div style="width: 48px; height: 48px; background: var(--color-yellow); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 1.3rem;">
+        🔒
+      </div>
+      <h2 style="font-size: 1.3rem; font-weight: 900; text-transform: uppercase; margin-bottom: 6px; letter-spacing: -0.5px;">Painel Administrativo</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px;">
+        Acesso restrito para até <strong>2 administradores</strong> cadastrados.
+      </p>
+      <div style="background: rgba(255,222,0,0.08); border: 1px solid rgba(255,222,0,0.2); padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 0.75rem; color: var(--text-secondary); text-align: left;">
+        ℹ️ <strong>Primeiro acesso com a senha principal:</strong> o sistema exigirá a alteração imediata da senha pessoal antes de liberar o painel.
+      </div>
+      
+      <div class="form-group" style="text-align: left; margin-bottom: 12px;">
+        <label style="font-size: 0.75rem; font-family: var(--font-specs); color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Usuário (ex: admin1 ou admin2)</label>
+        <input type="text" id="adminUsernameInput" class="form-input" placeholder="admin1 ou admin2" style="margin-top: 4px;">
+      </div>
+
+      <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+        <label style="font-size: 0.75rem; font-family: var(--font-specs); color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Senha</label>
+        <input type="password" id="adminPasswordInput" class="form-input" placeholder="Senha do Administrador" style="margin-top: 4px;">
+      </div>
+
+      <button type="button" class="btn-primary" style="width: 100%;" id="loginSubmitBtn" onclick="doAdminLogin()">Entrar no Painel</button>
+      <div id="loginErrorMsg" style="color: var(--danger); font-size: 0.8rem; margin-top: 14px; display: none; background: rgba(248,113,113,0.1); padding: 8px; border-radius: 4px;"></div>
+    </div>
+
+    <!-- ETAPA 2: FORÇAR ALTERAÇÃO DE SENHA NO PRIMEIRO ACESSO -->
+    <div id="forcePasswordChangeSection" class="wizard-card" style="max-width: 440px; margin: 40px auto; text-align: center; display: none;">
+      <div style="width: 48px; height: 48px; background: #F7B500; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 1.3rem;">
+        🔐
+      </div>
+      <h2 style="font-size: 1.3rem; font-weight: 900; text-transform: uppercase; margin-bottom: 6px;">Alteração Obrigatória de Senha</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+        Primeiro acesso detectado para o usuário <strong id="changeTargetUser" style="color: var(--color-yellow);"></strong>.
+        Por segurança e conformidade, defina sua nova senha pessoal antes de prosseguir.
+      </p>
+
+      <div class="form-group" style="text-align: left; margin-bottom: 12px;">
+        <label style="font-size: 0.75rem; font-family: var(--font-specs); color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Nova Senha (Mínimo 6 caracteres)</label>
+        <input type="password" id="newPasswordInput" class="form-input" placeholder="Nova senha segura" style="margin-top: 4px;">
+      </div>
+
+      <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+        <label style="font-size: 0.75rem; font-family: var(--font-specs); color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Confirmar Nova Senha</label>
+        <input type="password" id="confirmNewPasswordInput" class="form-input" placeholder="Confirme a nova senha" style="margin-top: 4px;">
+      </div>
+
+      <button type="button" class="btn-primary" style="width: 100%;" id="changePasswordBtn" onclick="doChangePassword()">Salvar Nova Senha & Acessar</button>
+      <div id="changeErrorMsg" style="color: var(--danger); font-size: 0.8rem; margin-top: 14px; display: none; background: rgba(248,113,113,0.1); padding: 8px; border-radius: 4px;"></div>
+    </div>
+
+    <!-- ÁREA AUTENTICADA DO PAINEL -->
+    <div id="adminDashboardSection" style="display: none;">
+      
+      <nav class="admin-nav">
+        <button type="button" class="admin-tab-btn active" id="tabBtn_reservas" onclick="switchAdminTab('reservas')">📋 Reservas</button>
+        <button type="button" class="admin-tab-btn" id="tabBtn_calendario" onclick="switchAdminTab('calendario')">📅 Calendário Anti-Conflito</button>
+        <button type="button" class="admin-tab-btn" id="tabBtn_produtos" onclick="switchAdminTab('produtos')">🍺 Produtos & Estoque</button>
+        <button type="button" class="admin-tab-btn" id="tabBtn_developer" onclick="switchAdminTab('developer')">🛠️ Developer Console</button>
+      </nav>
+
+      <!-- ABA 1: RESERVAS -->
+      <section id="view_reservas" class="wizard-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.3rem; font-weight: 800;">Gestão de Reservas</h2>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Filtrar pelo status do pedido:</div>
+          </div>
+          <div style="display: flex; gap: 6px; overflow-x: auto; max-width: 100%;">
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="filterReservations('TODAS')">Todas</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="filterReservations('Pendente')">Pendentes</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="filterReservations('Confirmada')">Confirmadas</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="filterReservations('Paga')">Pagas</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="filterReservations('Cancelada')">Canceladas</button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table" id="reservationsTable">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Data Evento</th>
+                <th>Cliente</th>
+                <th>Contato</th>
+                <th>Local</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="reservationsTableBody">
+              <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Carregando reservas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ABA 2: CALENDÁRIO VISUAL ANTI-DOUBLE BOOKING -->
+      <section id="view_calendario" class="wizard-card" style="display: none;">
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 1.3rem; font-weight: 800;">Calendário de Alocação de Equipamentos</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Monitore equipamentos e caminhões já reservados para prevenir choques de datas.</p>
+        </div>
+
+        <div id="calendarCardsGrid" class="cal-grid">
+          <!-- Injetado dinamicamente -->
+        </div>
+      </section>
+
+      <!-- ABA 3: PRODUTOS E ESTOQUE -->
+      <section id="view_produtos" class="wizard-card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 1.3rem; font-weight: 800;">Catálogo de Preços & Estoque</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Os preços e estoques são sincronizados com a aba PRODUTOS da planilha.</p>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Volume</th>
+                <th>Preço</th>
+                <th>Estoque</th>
+                <th>Ativo</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody">
+              <!-- Injetado dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ABA 4: PAINEL DO DESENVOLVEDOR (ASM SOLUTIONS) -->
+      <section id="view_developer" class="wizard-card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.3rem; font-weight: 900; text-transform: uppercase;">🛠️ Developer Console</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">
+              Diagnóstico técnico, telemetria de infraestrutura e gestão de segurança.
+            </p>
+          </div>
+          <button class="btn-secondary" style="font-size: 0.75rem; padding: 6px 12px;" onclick="loadDeveloperConsole()">
+            🔄 Atualizar Diagnósticos
+          </button>
+        </div>
+
+        <div class="dev-grid" id="devConsoleContent">
+          <div style="color: var(--text-muted); padding: 20px; grid-column: 1 / -1; text-align: center;">
+            Carregando telemetria do backend...
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RODAPÉ OFICIAL COM LINK ASM SOLUTIONS -->
+    <footer style="margin-top: 40px; padding: 20px 0; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-specs);">
+      <div>
+        © 2026 Cervejaria Guanandi. Desenvolvido por 
+        <a href="https://alansmsolutions.com/" target="_blank" rel="noopener noreferrer" style="color: var(--color-yellow); text-decoration: none; font-weight: 800;">
+          ASM Solutions
+        </a>
+      </div>
+      <div style="font-size: 0.75rem; color: #555; margin-top: 4px;">
+        Arquitetura Segura • Senhas Criptografadas em Backend • Máximo 2 Usuários Administradores
+      </div>
+    </footer>
+
+  </main>
+
+  <script>
+    let AdminToken = '';
+    let TempChangeToken = '';
+    let CurrentAdminUser = '';
+    let AdminReservationsList = [];
+
+    function doAdminLogin() {
+      const username = (document.getElementById('adminUsernameInput').value || '').trim();
+      const pwd = document.getElementById('adminPasswordInput').value;
+      const errEl = document.getElementById('loginErrorMsg');
+      const btn = document.getElementById('loginSubmitBtn');
+      errEl.style.display = 'none';
+
+      if (!username || !pwd) {
+        errEl.textContent = 'Informe o usuário e a senha.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            btn.disabled = false;
+            btn.textContent = 'Entrar no Painel';
+            if (res.success) {
+              if (res.mustChangePassword) {
+                // Primeiro acesso: força troca de senha
+                TempChangeToken = res.tempToken;
+                CurrentAdminUser = res.username;
+                document.getElementById('adminLoginSection').style.display = 'none';
+                document.getElementById('changeTargetUser').textContent = res.username;
+                document.getElementById('forcePasswordChangeSection').style.display = 'block';
+              } else {
+                // Acesso liberado
+                AdminToken = res.token;
+                CurrentAdminUser = res.user.username;
+                finishLoginSuccess(res.user);
+              }
+            } else {
+              errEl.textContent = res.error || 'Credenciais inválidas.';
+              errEl.style.display = 'block';
+            }
+          })
+          .withFailureHandler(err => {
+            btn.disabled = false;
+            btn.textContent = 'Entrar no Painel';
+            errEl.textContent = 'Erro de comunicação com o servidor: ' + err.message;
+            errEl.style.display = 'block';
+          })
+          .loginAdmin(username, pwd);
+      } else {
+        // Fallback para preview local
+        btn.disabled = false;
+        btn.textContent = 'Entrar no Painel';
+        if (pwd === 'Guanandi@2026') {
+          TempChangeToken = 'mock-temp-token';
+          CurrentAdminUser = username || 'admin1';
+          document.getElementById('adminLoginSection').style.display = 'none';
+          document.getElementById('changeTargetUser').textContent = CurrentAdminUser;
+          document.getElementById('forcePasswordChangeSection').style.display = 'block';
+        } else {
+          AdminToken = 'mock-token';
+          finishLoginSuccess({ username: username || 'admin1', name: 'Administrador' });
+        }
+      }
+    }
+
+    function doChangePassword() {
+      const p1 = document.getElementById('newPasswordInput').value;
+      const p2 = document.getElementById('confirmNewPasswordInput').value;
+      const errEl = document.getElementById('changeErrorMsg');
+      const btn = document.getElementById('changePasswordBtn');
+      errEl.style.display = 'none';
+
+      if (!p1 || p1.length < 6) {
+        errEl.textContent = 'A senha deve ter no mínimo 6 caracteres.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      if (p1 !== p2) {
+        errEl.textContent = 'As senhas digitadas não coincidem.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            btn.disabled = false;
+            btn.textContent = 'Salvar Nova Senha & Acessar';
+            if (res.success) {
+              alert('Senha personalizada salva com sucesso!');
+              AdminToken = res.token;
+              document.getElementById('forcePasswordChangeSection').style.display = 'none';
+              finishLoginSuccess(res.user);
+            } else {
+              errEl.textContent = res.error || 'Erro ao alterar senha.';
+              errEl.style.display = 'block';
+            }
+          })
+          .withFailureHandler(err => {
+            btn.disabled = false;
+            btn.textContent = 'Salvar Nova Senha & Acessar';
+            errEl.textContent = 'Erro ao salvar senha: ' + err.message;
+            errEl.style.display = 'block';
+          })
+          .changeAdminPassword(TempChangeToken, p1);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Salvar Nova Senha & Acessar';
+        AdminToken = 'mock-token';
+        document.getElementById('forcePasswordChangeSection').style.display = 'none';
+        finishLoginSuccess({ username: CurrentAdminUser, name: 'Administrador' });
+      }
+    }
+
+    function finishLoginSuccess(user) {
+      document.getElementById('adminLoginSection').style.display = 'none';
+      document.getElementById('forcePasswordChangeSection').style.display = 'none';
+      document.getElementById('adminDashboardSection').style.display = 'block';
+
+      const badge = document.getElementById('activeUserBadge');
+      badge.textContent = '👤 ' + (user.name || user.username);
+      badge.style.display = 'inline-block';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+
+      loadAdminData();
+    }
+
+    function doAdminLogout() {
+      AdminToken = '';
+      TempChangeToken = '';
+      CurrentAdminUser = '';
+      document.getElementById('adminDashboardSection').style.display = 'none';
+      document.getElementById('activeUserBadge').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminLoginSection').style.display = 'block';
+      document.getElementById('adminPasswordInput').value = '';
+    }
+
+    function switchAdminTab(tab) {
+      ['reservas', 'calendario', 'produtos', 'developer'].forEach(t => {
+        const el = document.getElementById('view_' + t);
+        const btn = document.getElementById('tabBtn_' + t);
+        if (el) el.style.display = (t === tab) ? 'block' : 'none';
+        if (btn) btn.classList.toggle('active', t === tab);
+      });
+      if (tab === 'calendario') loadCalendar();
+      if (tab === 'produtos') loadProductsAdmin();
+      if (tab === 'developer') loadDeveloperConsole();
+    }
+
+    function loadAdminData() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.success) {
+              AdminReservationsList = res.reservations;
+              renderReservationsTable(AdminReservationsList);
+            }
+          })
+          .getAdminReservations(AdminToken);
+      } else {
+        AdminReservationsList = [
+          {
+            id: '#GN-00101',
+            eventDate: '2026-10-15',
+            customerName: 'Roberto Almeida',
+            customerWhatsApp: '12998887766',
+            city: 'São Sebastião',
+            total: 1850,
+            status: 'Pendente',
+            items: [{ name: 'Chopp Pilsen 50L', quantity: 2 }, { name: 'Chopeira 2 Vias', quantity: 1 }]
+          }
+        ];
+        renderReservationsTable(AdminReservationsList);
+      }
+    }
+
+    function renderReservationsTable(list) {
+      const tbody = document.getElementById('reservationsTableBody');
+      tbody.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">Nenhuma reserva encontrada.</td></tr>';
+        return;
+      }
+
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        const stClass = 'status-' + (r.status || 'pendente').toLowerCase().replace(/\s+/g, '');
+        const waClean = String(r.customerWhatsApp || '').replace(/\D/g, '');
+
+        tr.innerHTML = `
+          <td><strong>${r.id}</strong></td>
+          <td>${r.eventDate}</td>
+          <td>${r.customerName}</td>
+          <td>
+            <a href="https://wa.me/55${waClean}" target="_blank" style="color: #25D366; text-decoration: none; font-weight:700;">
+              📱 ${r.customerWhatsApp}
+            </a>
+          </td>
+          <td>${r.city || '-'}</td>
+          <td style="font-weight:800; color:var(--color-yellow);">R$ ${Number(r.total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+          <td>
+            <span class="status-badge ${stClass}">${r.status}</span>
+          </td>
+          <td>
+            <select onchange="changeStatus('${r.id}', this.value)" style="background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color); padding:4px; font-size:0.75rem; border-radius:4px;">
+              <option value="">Alterar...</option>
+              <option value="Pendente">Pendente</option>
+              <option value="Confirmada">Confirmada</option>
+              <option value="Paga">Paga</option>
+              <option value="Em Preparação">Em Preparação</option>
+              <option value="Entregue">Entregue</option>
+              <option value="Finalizada">Finalizada</option>
+              <option value="Cancelada">Cancelada</option>
+            </select>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function changeStatus(id, newStatus) {
+      if (!newStatus) return;
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.success) loadAdminData();
+            else alert(res.error);
+          })
+          .updateReservationStatus(AdminToken, id, newStatus);
+      } else {
+        const item = AdminReservationsList.find(x => x.id === id);
+        if (item) item.status = newStatus;
+        renderReservationsTable(AdminReservationsList);
+      }
+    }
+
+    function filterReservations(status) {
+      if (status === 'TODAS') {
+        renderReservationsTable(AdminReservationsList);
+      } else {
+        renderReservationsTable(AdminReservationsList.filter(r => r.status.toLowerCase() === status.toLowerCase()));
+      }
+    }
+
+    function loadCalendar() {
+      const grid = document.getElementById('calendarCardsGrid');
+      grid.innerHTML = '<div style="color: var(--text-muted);">Carregando dados de alocação...</div>';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.success) renderCalendar(res.calendar);
+          })
+          .getCalendarEvents(AdminToken);
+      } else {
+        renderCalendar([
+          {
+            date: '2026-10-15',
+            count: 1,
+            equipmentCounts: { chopeiras: 1, beertruck: 1, tendas: 0, barris: 2 }
+          }
+        ]);
+      }
+    }
+
+    function renderCalendar(days) {
+      const grid = document.getElementById('calendarCardsGrid');
+      grid.innerHTML = '';
+
+      if (!days || days.length === 0) {
+        grid.innerHTML = '<div style="color: var(--text-muted); grid-column: span 3; text-align: center; padding: 24px;">Nenhum evento agendado para os próximos dias.</div>';
+        return;
+      }
+
+      days.forEach(d => {
+        const card = document.createElement('div');
+        card.className = 'cal-day-card';
+        card.innerHTML = `
+          <div class="cal-day-header">
+            <strong>📅 ${d.date}</strong>
+            <span class="status-badge status-confirmada">${d.count} Evento(s)</span>
+          </div>
+          <div style="font-size: 0.8rem; line-height: 1.8;">
+            <div>🍺 <strong>Chopeiras Alocadas:</strong> ${d.equipmentCounts.chopeiras}</div>
+            <div>🚚 <strong>Beer Truck Alocado:</strong> ${d.equipmentCounts.beertruck ? 'SIM (Ocupado)' : 'Livre'}</div>
+            <div>⛺ <strong>Tendas Alocadas:</strong> ${d.equipmentCounts.tendas}</div>
+            <div>📦 <strong>Barris de Chopp:</strong> ${d.equipmentCounts.barris}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function loadProductsAdmin() {
+      const tbody = document.getElementById('productsTableBody');
+      tbody.innerHTML = '<tr><td colspan="7">Carregando catálogo...</td></tr>';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(list => {
+            renderProductsAdmin(list);
+          })
+          .getAllProductsAdmin();
+      } else {
+        renderProductsAdmin([
+          { id: 'CHO-01', name: 'Chopeira Elétrica 2 Vias', category: 'chopeira', volumeL: 0, price: 150, stock: 5, active: true },
+          { id: 'TRK-01', name: 'The Beer Truck Guanandi', category: 'beertruck', volumeL: 0, price: 800, stock: 1, active: true },
+          { id: 'CER-01', name: 'Pilsen Puro Malte', category: 'cerveja', volumeL: 30, price: 450, stock: 25, active: true },
+          { id: 'CER-02', name: 'Pilsen Puro Malte', category: 'cerveja', volumeL: 50, price: 750, stock: 30, active: true }
+        ]);
+      }
+    }
+
+    function renderProductsAdmin(prods) {
+      const tbody = document.getElementById('productsTableBody');
+      tbody.innerHTML = '';
+      prods.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${p.id}</strong></td>
+          <td>${p.name}</td>
+          <td><span class="badge-vol">${p.category}</span></td>
+          <td>${p.volumeL ? p.volumeL + 'L' : '-'}</td>
+          <td style="font-weight:700; color:var(--color-yellow);">R$ ${Number(p.price || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+          <td><strong>${p.stock} un</strong></td>
+          <td>${p.active ? '<span style="color:var(--success);">● Ativo</span>' : '<span style="color:var(--text-muted);">Inativo</span>'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function loadDeveloperConsole() {
+      const container = document.getElementById('devConsoleContent');
+      container.innerHTML = '<div style="color: var(--text-muted); padding: 20px; grid-column: 1 / -1; text-align: center;">Carregando telemetria...</div>';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.success) renderDeveloperConsole(res);
+            else container.innerHTML = '<div style="color:var(--danger); grid-column: 1 / -1;">' + res.error + '</div>';
+          })
+          .getDeveloperDiagnostics(AdminToken);
+      } else {
+        // Fallback demo data
+        renderDeveloperConsole({
+          environment: {
+            runtime: 'Google Apps Script V8',
+            serverTime: new Date().toISOString(),
+            timeZone: 'America/Sao_Paulo',
+            spreadsheetId: 'SPREADSHEET_ID_VINCULADA',
+            spreadsheetName: 'DB_Cervejaria_Guanandi_2026',
+            storageEngine: 'ScriptProperties (Segurança Backend)',
+            maxAdminsAllowed: 2
+          },
+          counts: {
+            reservations: 12,
+            products: 8,
+            configRows: 14,
+            itemsRows: 24
+          },
+          adminSlots: [
+            { slot: 1, username: 'admin1', name: 'Administrador 1', status: 'Ativo & Protegido', mustChangePassword: false, lastLogin: 'Hoje' },
+            { slot: 2, username: 'admin2', name: 'Administrador 2', status: 'Primeiro Acesso Pendente', mustChangePassword: true, lastLogin: 'Nunca' }
+          ],
+          partner: {
+            name: 'ASM Solutions',
+            website: 'https://alansmsolutions.com/',
+            support: 'suporte@alansmsolutions.com'
+          }
+        });
+      }
+    }
+
+    function renderDeveloperConsole(data) {
+      const container = document.getElementById('devConsoleContent');
+      const env = data.environment;
+      const counts = data.counts;
+      const slots = data.adminSlots;
+      const partner = data.partner;
+
+      container.innerHTML = `
+        <!-- Card 1: Infraestrutura Backend -->
+        <div class="dev-card">
+          <div class="dev-title">⚡ Infraestrutura Backend</div>
+          <div class="dev-row">
+            <span>Runtime:</span>
+            <strong style="color: #fff;">${env.runtime}</strong>
+          </div>
+          <div class="dev-row">
+            <span>Motor de Senhas:</span>
+            <strong style="color: #34D399;">${env.storageEngine}</strong>
+          </div>
+          <div class="dev-row">
+            <span>Limite Administradores:</span>
+            <strong style="color: var(--color-yellow);">${env.maxAdminsAllowed} Usuários Máx.</strong>
+          </div>
+          <div class="dev-row">
+            <span>Fuso Horário:</span>
+            <strong>${env.timeZone}</strong>
+          </div>
+          <div class="dev-row">
+            <span>Planilha Conectada:</span>
+            <strong style="font-size:0.7rem;" title="${env.spreadsheetId}">${env.spreadsheetName || 'Vinculada'}</strong>
+          </div>
+        </div>
+
+        <!-- Card 2: Slots de Administrador (Max 2) -->
+        <div class="dev-card">
+          <div class="dev-title">👥 Slots de Usuário (Máx. 2)</div>
+          ${slots.map(s => `
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 10px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: var(--color-yellow);">Slot ${s.slot}: ${s.username}</strong>
+                <span class="status-badge ${s.mustChangePassword ? 'status-pendente' : 'status-confirmada'}">
+                  ${s.status}
+                </span>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                ${s.mustChangePassword ? '⚠️ Exige troca de senha no próximo login' : '🔒 Senha personalizada configurada'}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Card 3: Estatísticas de Registros -->
+        <div class="dev-card">
+          <div class="dev-title">📊 Integridade do Banco</div>
+          <div class="dev-row">
+            <span>Total de Reservas:</span>
+            <strong style="color: var(--color-yellow);">${counts.reservations} registros</strong>
+          </div>
+          <div class="dev-row">
+            <span>Produtos Cadastrados:</span>
+            <strong>${counts.products} itens</strong>
+          </div>
+          <div class="dev-row">
+            <span>Itens de Alocação:</span>
+            <strong>${counts.itemsRows} itens</strong>
+          </div>
+          <div class="dev-row">
+            <span>Chaves de Configuração:</span>
+            <strong>${counts.configRows} chaves</strong>
+          </div>
+        </div>
+
+        <!-- Card 4: Suporte Técnico & Parceria -->
+        <div class="dev-card" style="border-color: rgba(255,222,0,0.3);">
+          <div class="dev-title">🚀 Tecnologia & Suporte</div>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+            Plataforma desenvolvida e mantida por <strong>${partner.name}</strong>, especializada em automação corporativa, dashboards e sistemas de locação.
+          </p>
+          <div style="margin-top: 10px;">
+            <a href="${partner.website}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="display: block; text-align: center; font-size: 0.8rem; text-decoration: none; padding: 8px 12px;">
+              🌐 Visitar Website ASM Solutions
+            </a>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

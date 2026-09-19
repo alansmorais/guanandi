@@ -1,0 +1,6 @@
+{
+  "name": "Cervejaria Guanandi",
+  "description": "Locação de chopp artesanal, chopeiras elétricas e estrutura para eventos em Caraguatatuba, São Sebastião, Ilhabela e Ubatuba.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

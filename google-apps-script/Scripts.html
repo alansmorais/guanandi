@@ -1,0 +1,767 @@
+<script>
+  // Estado Global da Aplicação
+  const AppState = {
+    currentStep: 1,
+    totalSteps: 8,
+    config: {
+      companyName: 'Cervejaria Guanandi',
+      whatsapp: '5512999990000',
+      minLeadDays: 7
+    },
+    products: [],
+    regions: [],
+    // Seleções do Usuário
+    selectedServices: new Set(),
+    items: {}, // { [productId]: quantity }
+    event: {
+      date: '',
+      startTime: '16:00',
+      endTime: '23:00',
+      cep: '',
+      address: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: 'SP',
+      guests: 50,
+      deliveryFee: 0
+    },
+    customer: {
+      name: '',
+      whatsapp: '',
+      email: '',
+      needInvoice: false,
+      invoiceDoc: '',
+      invoiceName: '',
+      notes: ''
+    },
+    reservationResult: null
+  };
+
+  // Inicialização ao carregar o DOM
+  document.addEventListener('DOMContentLoaded', () => {
+    loadInitialData();
+    setupEventListeners();
+    setupCepLookup();
+  });
+
+  // Carrega dados do Backend (ou Mock de segurança caso rodando localmente)
+  function loadInitialData() {
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(handleInitialDataLoaded)
+        .withFailureHandler(err => {
+          showError('Falha ao carregar dados do servidor: ' + err.message);
+          useFallbackData();
+        })
+        .getInitialClientData();
+    } else {
+      console.log('Ambiente fora do Apps Script. Usando catálogo integrado.');
+      useFallbackData();
+    }
+  }
+
+  function handleInitialDataLoaded(res) {
+    if (res && res.success) {
+      AppState.config = res.config;
+      AppState.products = res.products;
+      AppState.regions = res.regions;
+      initAfterData();
+    } else {
+      useFallbackData();
+    }
+  }
+
+  function useFallbackData() {
+    AppState.products = [
+      { id: 'CHO-01', name: 'Chopeira Elétrica 2 Vias', category: 'chopeira', description: 'Capacidade 70L/h, 220V', volumeL: 0, price: 150, stock: 5 },
+      { id: 'TRK-01', name: 'The Beer Truck Guanandi', category: 'beertruck', description: 'Van com 4 torneiras estilizadas', volumeL: 0, price: 800, stock: 1 },
+      { id: 'TEN-01', name: 'Tenda Sanfonada 3x3m', category: 'tenda', description: 'Impermeável e reforçada', volumeL: 0, price: 250, stock: 4 },
+      { id: 'PAC-01', name: 'Pacote Festa Completa', category: 'pacote', description: 'Beer Truck + Tenda + Mesas', volumeL: 0, price: 1500, stock: 1 },
+      { id: 'CER-01', name: 'Pilsen Puro Malte', category: 'cerveja', description: 'Cerveja clara e leve', volumeL: 30, price: 450, stock: 20 },
+      { id: 'CER-02', name: 'Pilsen Puro Malte', category: 'cerveja', description: 'Cerveja clara e leve', volumeL: 50, price: 750, stock: 20 },
+      { id: 'CER-03', name: 'American IPA', category: 'cerveja', description: 'Lúpulos americanos intensos', volumeL: 30, price: 660, stock: 10 },
+      { id: 'CER-04', name: 'American IPA', category: 'cerveja', description: 'Lúpulos americanos intensos', volumeL: 50, price: 1100, stock: 10 },
+      { id: 'CER-05', name: 'Cream Ale com Limão Siciliano', category: 'cerveja', description: 'Refrescante, Abv 4,8% Ibu 12', volumeL: 30, price: 540, stock: 10 },
+      { id: 'CER-06', name: 'Cream Ale com Limão Siciliano', category: 'cerveja', description: 'Refrescante, Abv 4,8% Ibu 12', volumeL: 50, price: 900, stock: 10 },
+      { id: 'CER-07', name: 'Weissbier Trigo Especial', category: 'cerveja', description: 'Malte de trigo', volumeL: 30, price: 540, stock: 10 },
+      { id: 'CER-09', name: 'Chope Red Ale Maltado', category: 'cerveja', description: 'Maltes levemente tostados', volumeL: 30, price: 540, stock: 10 },
+      { id: 'CER-11', name: 'Chope Artesanal de Morango', category: 'cerveja', description: 'Frutado e marcante', volumeL: 30, price: 540, stock: 10 },
+      { id: 'EXT-01', name: 'Jogo de Mesa de Madeira (1 mesa + 4 cad.)', category: 'adicional', description: 'Dobrável', volumeL: 0, price: 35, stock: 30 },
+      { id: 'EXT-02', name: 'Copos Acrílico 400ml (Pct 50un)', category: 'adicional', description: 'Reutilizáveis', volumeL: 0, price: 75, stock: 50 },
+      { id: 'SRV-01', name: 'Montagem & Calibração Especializada', category: 'servico', description: 'Técnico no local', volumeL: 0, price: 80, stock: 10 }
+    ];
+    AppState.regions = [
+      { city: 'São Sebastião - Centro / Costa Norte', fee: 0 },
+      { city: 'São Sebastião - Costa Sul (Maresias, Camburi)', fee: 120 },
+      { city: 'Caraguatatuba - Centro / Geral', fee: 220 },
+      { city: 'Ilhabela (balsa inclusa)', fee: 350 },
+      { city: 'Ubatuba - Centro / Sul', fee: 380 },
+      { city: 'Retirada no Local (Cervejaria)', fee: 0 }
+    ];
+    initAfterData();
+  }
+
+  function initAfterData() {
+    setupMinDate();
+    populateRegionsSelect();
+    renderStep2Beers();
+    renderStep5Extras();
+    updateRecalculation();
+  }
+
+  function setupMinDate() {
+    const minDays = AppState.config.minLeadDays || 7;
+    const target = new Date();
+    target.setDate(target.getDate() + minDays);
+    const minStr = target.toISOString().split('T')[0];
+
+    const dateInput = document.getElementById('eventDate');
+    if (dateInput) {
+      dateInput.min = minStr;
+      dateInput.value = minStr;
+      AppState.event.date = minStr;
+    }
+  }
+
+  function populateRegionsSelect() {
+    const sel = document.getElementById('eventCity');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Selecione sua cidade / região...</option>';
+    AppState.regions.forEach(reg => {
+      const opt = document.createElement('option');
+      opt.value = reg.city;
+      opt.textContent = `${reg.city} — ${reg.fee > 0 ? formatMoney(reg.fee) : 'Frete Grátis'}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Renderiza Cervejas no Passo 2
+  function renderStep2Beers() {
+    const container = document.getElementById('beersList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const beers = AppState.products.filter(p => p.category === 'cerveja');
+    beers.forEach((beer, idx) => {
+      const el = document.createElement('div');
+      el.className = 'beer-item';
+      const qty = AppState.items[beer.id] || 0;
+
+      el.innerHTML = `
+        <div class="beer-info">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge-tap">TAP 0${idx + 1}</span>
+            <span class="beer-name">${beer.name}</span>
+          </div>
+          <div class="beer-meta">
+            <span class="badge-vol">${beer.volumeL}L Barril</span>
+            <span class="beer-price">${formatMoney(beer.price)}</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">${beer.description || ''}</div>
+        </div>
+        <div class="qty-counter">
+          <button type="button" class="qty-btn" onclick="changeQty('${beer.id}', -1)">−</button>
+          <span class="qty-value" id="qty_${beer.id}">${qty}</span>
+          <button type="button" class="qty-btn" onclick="changeQty('${beer.id}', 1)">+</button>
+        </div>
+      `;
+      container.appendChild(el);
+    });
+  }
+
+  // Renderiza Adicionais no Passo 5
+  function renderStep5Extras() {
+    const container = document.getElementById('extrasList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const extras = AppState.products.filter(p => p.category === 'adicional' || p.category === 'servico');
+    extras.forEach(extra => {
+      const el = document.createElement('div');
+      el.className = 'beer-item';
+      const qty = AppState.items[extra.id] || 0;
+
+      el.innerHTML = `
+        <div class="beer-info">
+          <div class="beer-name">${extra.name}</div>
+          <div class="beer-meta">
+            <span class="beer-price">${formatMoney(extra.price)}</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">${extra.description || ''}</div>
+        </div>
+        <div class="qty-counter">
+          <button type="button" class="qty-btn" onclick="changeQty('${extra.id}', -1)">−</button>
+          <span class="qty-value" id="qty_${extra.id}">${qty}</span>
+          <button type="button" class="qty-btn" onclick="changeQty('${extra.id}', 1)">+</button>
+        </div>
+      `;
+      container.appendChild(el);
+    });
+  }
+
+  // Controle de Quantidade
+  window.changeQty = function(productId, delta) {
+    const current = AppState.items[productId] || 0;
+    const next = Math.max(0, current + delta);
+    if (next === 0) {
+      delete AppState.items[productId];
+    } else {
+      AppState.items[productId] = next;
+    }
+    const valEl = document.getElementById('qty_' + productId);
+    if (valEl) valEl.textContent = next;
+    updateRecalculation();
+  };
+
+  // Alterna seleção de serviço no Passo 1
+  window.toggleService = function(serviceKey) {
+    const card = document.getElementById('srvCard_' + serviceKey);
+    if (AppState.selectedServices.has(serviceKey)) {
+      AppState.selectedServices.delete(serviceKey);
+      if (card) card.classList.remove('selected');
+    } else {
+      AppState.selectedServices.add(serviceKey);
+      if (card) card.classList.add('selected');
+    }
+    updateRecalculation();
+  };
+
+  // Seletor rápido de convidados no Passo 4
+  window.selectGuests = function(num) {
+    AppState.event.guests = num;
+    document.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('selected'));
+    const activeBtn = document.getElementById('guestChip_' + num);
+    if (activeBtn) activeBtn.classList.add('selected');
+
+    const customInput = document.getElementById('customGuests');
+    if (customInput) customInput.value = num;
+
+    suggestBeerVolume(num);
+  };
+
+  function suggestBeerVolume(guests) {
+    const hint = document.getElementById('guestBeerHint');
+    if (!hint) return;
+    const litersEst = Math.round(guests * 1.5);
+    const kegs50 = Math.ceil(litersEst / 50);
+    hint.textContent = `💡 Para ${guests} pessoas em média 4h a 5h de evento, recomenda-se cerca de ${litersEst} Litros (aprox. ${kegs50} barris de 50L).`;
+  }
+
+  // Cálculo e Atualização de Resumos
+  function updateRecalculation() {
+    let subtotal = 0;
+    let beerKegCount = 0;
+
+    for (const [pid, qty] of Object.entries(AppState.items)) {
+      const prod = AppState.products.find(p => p.id === pid);
+      if (prod) {
+        subtotal += prod.price * qty;
+        if (prod.category === 'cerveja') {
+          beerKegCount += qty;
+        }
+      }
+    }
+
+    const delivery = AppState.event.deliveryFee || 0;
+    const total = subtotal + delivery;
+
+    // Atualiza Resumos
+    const subtotalEl = document.getElementById('sidebarSubtotal');
+    if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
+
+    const deliveryEl = document.getElementById('sidebarDelivery');
+    if (deliveryEl) deliveryEl.textContent = formatMoney(delivery);
+
+    const totalEls = document.querySelectorAll('.total-display-val');
+    totalEls.forEach(el => el.textContent = formatMoney(total));
+
+    const beerSummaryFooter = document.getElementById('step2BeerFooterSummary');
+    if (beerSummaryFooter) {
+      beerSummaryFooter.textContent = `${beerKegCount} barril(is) selecionado(s) · ${formatMoney(subtotal)}`;
+    }
+  }
+
+  // Navegação entre passos (Step-by-step)
+  window.goToStep = function(step) {
+    if (step > AppState.currentStep) {
+      if (!validateStep(AppState.currentStep)) return;
+    }
+
+    AppState.currentStep = step;
+    updateStepView();
+  };
+
+  window.nextStep = function() {
+    goToStep(AppState.currentStep + 1);
+  };
+
+  window.prevStep = function() {
+    goToStep(Math.max(1, AppState.currentStep - 1));
+  };
+
+  function validateStep(step) {
+    hideError();
+
+    if (step === 1) {
+      if (AppState.selectedServices.size === 0) {
+        showError('Por favor, selecione pelo menos um item para continuar.');
+        return false;
+      }
+    } else if (step === 2) {
+      // Se selecionou chopeira ou beer truck, exige pelo menos 1 barril
+      const needsBeer = AppState.selectedServices.has('chopeira') || AppState.selectedServices.has('beertruck');
+      let beerKegCount = 0;
+      for (const [pid, qty] of Object.entries(AppState.items)) {
+        const prod = AppState.products.find(p => p.id === pid);
+        if (prod && prod.category === 'cerveja') beerKegCount += qty;
+      }
+
+      if (needsBeer && beerKegCount === 0) {
+        showError('Você escolheu Chopeira/Beer Truck. Por favor, adicione pelo menos 1 barril de chopp para sua reserva.');
+        return false;
+      }
+    } else if (step === 3) {
+      const dateVal = document.getElementById('eventDate').value;
+      const cityVal = document.getElementById('eventCity').value;
+      const addrVal = document.getElementById('eventAddress').value;
+
+      if (!dateVal) {
+        showError('Por favor, selecione a data do evento.');
+        return false;
+      }
+      if (!cityVal) {
+        showError('Por favor, selecione a cidade/região da entrega.');
+        return false;
+      }
+      if (!addrVal.trim()) {
+        showError('Por favor, informe a rua ou endereço do evento.');
+        return false;
+      }
+
+      AppState.event.date = dateVal;
+      AppState.event.city = cityVal;
+      AppState.event.address = addrVal;
+      AppState.event.startTime = document.getElementById('eventStartTime').value;
+      AppState.event.endTime = document.getElementById('eventEndTime').value;
+      AppState.event.number = document.getElementById('eventNumber').value;
+      AppState.event.neighborhood = document.getElementById('eventNeighborhood').value;
+
+      // Atualiza frete
+      const regObj = AppState.regions.find(r => r.city === cityVal);
+      AppState.event.deliveryFee = regObj ? regObj.fee : 0;
+      updateRecalculation();
+    } else if (step === 6) {
+      // Passagem pelo resumo, ok
+    } else if (step === 7) {
+      const name = document.getElementById('custName').value.trim();
+      const whats = document.getElementById('custWhats').value.trim();
+      const email = document.getElementById('custEmail').value.trim();
+
+      if (!name) {
+        showError('Por favor, informe seu nome completo.');
+        return false;
+      }
+      if (!whats || whats.length < 10) {
+        showError('Por favor, informe um WhatsApp válido com DDD.');
+        return false;
+      }
+      if (!email || !email.includes('@')) {
+        showError('Por favor, informe um e-mail válido.');
+        return false;
+      }
+
+      AppState.customer.name = name;
+      AppState.customer.whatsapp = whats;
+      AppState.customer.email = email;
+      AppState.customer.needInvoice = document.getElementById('needInvoiceYes').checked;
+      AppState.customer.invoiceDoc = document.getElementById('invoiceDoc').value;
+      AppState.customer.notes = document.getElementById('orderNotes').value;
+    }
+
+    return true;
+  }
+
+  function updateStepView() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Esconde todos os passos e mostra o ativo
+    for (let i = 1; i <= AppState.totalSteps; i++) {
+      const el = document.getElementById('stepCard_' + i);
+      if (el) el.style.display = (i === AppState.currentStep) ? 'block' : 'none';
+
+      // Atualiza bullets do stepper
+      const node = document.getElementById('stepNode_' + i);
+      const line = document.getElementById('stepLine_' + (i - 1));
+
+      if (node) {
+        node.classList.remove('active', 'completed');
+        if (i === AppState.currentStep) node.classList.add('active');
+        else if (i < AppState.currentStep) node.classList.add('completed');
+      }
+      if (line) {
+        line.classList.toggle('completed', i <= AppState.currentStep);
+      }
+    }
+
+    // Ações especiais ao entrar no Passo 6 (Resumo)
+    if (AppState.currentStep === 6) {
+      renderStep6Summary();
+    }
+  }
+
+  function renderStep6Summary() {
+    const container = document.getElementById('bookingSheetContainer') || document.getElementById('summaryItemsTable');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Separa produtos por categoria
+    let subtotalBeers = 0;
+    let subtotalExtras = 0;
+    const beerItems = [];
+    const extraItems = [];
+
+    for (const [pid, qty] of Object.entries(AppState.items)) {
+      const p = AppState.products.find(prod => prod.id === pid);
+      if (p && qty > 0) {
+        const itemTotal = p.price * qty;
+        if (p.category === 'cerveja') {
+          subtotalBeers += itemTotal;
+          beerItems.push({ product: p, qty, itemTotal });
+        } else {
+          subtotalExtras += itemTotal;
+          extraItems.push({ product: p, qty, itemTotal });
+        }
+      }
+    }
+
+    const deliveryFee = AppState.event.deliveryFee || 0;
+    const grandTotal = subtotalBeers + subtotalExtras + deliveryFee;
+    const downPayment = grandTotal * 0.5;
+
+    // BLOCO 1: Evento & Logística
+    const block1 = document.createElement('div');
+    block1.className = 'golden-block';
+    block1.innerHTML = `
+      <div class="golden-header-bar">
+        <span>🟡 01. PROGRAMAÇÃO DO EVENTO & LOGÍSTICA</span>
+        <span class="tag">AGENDAMENTO</span>
+      </div>
+      <ul class="rental-checklist">
+        <li class="checklist-item">
+          <div class="item-left">
+            <span class="item-check">✓</span>
+            <span><strong>Data & Horário:</strong> ${formatDateBR(AppState.event.date)} das ${AppState.event.startTime} às ${AppState.event.endTime}</span>
+          </div>
+          <span class="item-val">Mín. 7 dias</span>
+        </li>
+        <li class="checklist-item">
+          <div class="item-left">
+            <span class="item-check">✓</span>
+            <span><strong>Local de Entrega:</strong> ${AppState.event.address}, ${AppState.event.number || 'S/N'} ${AppState.event.neighborhood ? `— ${AppState.event.neighborhood}` : ''} (${AppState.event.city})</span>
+          </div>
+          <span class="item-val">${deliveryFee > 0 ? formatMoney(deliveryFee) : 'Grátis'}</span>
+        </li>
+        <li class="checklist-item">
+          <div class="item-left">
+            <span class="item-check">✓</span>
+            <span><strong>Público Previsto:</strong> Capacidade estimada para o evento</span>
+          </div>
+          <span class="item-val">${AppState.event.guests} pessoas</span>
+        </li>
+      </ul>
+    `;
+    container.appendChild(block1);
+
+    // BLOCO 2: Dispensadores & Equipamentos
+    const block2 = document.createElement('div');
+    block2.className = 'golden-block';
+    let equipmentHtml = '';
+    if (AppState.selectedServices.has('chopeira')) {
+      equipmentHtml += `
+        <li class="checklist-item">
+          <div class="item-left"><span class="item-check">✓</span><span>Chopeira Elétrica 2 Vias (Acabamento Preto / Inox com pingadeira)</span></div>
+          <span class="item-val">Inclusa</span>
+        </li>
+      `;
+    }
+    if (AppState.selectedServices.has('beertruck')) {
+      equipmentHtml += `
+        <li class="checklist-item">
+          <div class="item-left"><span class="item-check">✓</span><span>Estrutura Beer Truck Guanandi com equipe de operação</span></div>
+          <span class="item-val">Mobilizado</span>
+        </li>
+      `;
+    }
+    if (AppState.selectedServices.has('tenda')) {
+      equipmentHtml += `
+        <li class="checklist-item">
+          <div class="item-left"><span class="item-check">✓</span><span>Tenda Sanfonada Impermeável 3x3m para cobertura</span></div>
+          <span class="item-val">Locação</span>
+        </li>
+      `;
+    }
+    equipmentHtml += `
+      <li class="checklist-item">
+        <div class="item-left"><span class="item-check">✓</span><span>Cilindro CO₂ Alimentício Grau Cervejeiro + Regulador de Pressão com Manômetro</span></div>
+        <span class="item-val">Incluso</span>
+      </li>
+      <li class="checklist-item">
+        <div class="item-left"><span class="item-check">✓</span><span>Válvula Extratora Slink Padrão e Mangueiras Atóxicas Sanitizadas</span></div>
+        <span class="item-val">Incluso</span>
+      </li>
+    `;
+
+    block2.innerHTML = `
+      <div class="golden-header-bar">
+        <span>🟡 02. DISPENSADORES & EQUIPAMENTOS</span>
+        <span class="tag">EQUIPAMENTO</span>
+      </div>
+      <ul class="rental-checklist">
+        ${equipmentHtml}
+      </ul>
+    `;
+    container.appendChild(block2);
+
+    // BLOCO 3: Barris de Chopp
+    if (beerItems.length > 0) {
+      const block3 = document.createElement('div');
+      block3.className = 'golden-block';
+      let beerHtml = '';
+      beerItems.forEach(item => {
+        beerHtml += `
+          <li class="checklist-item">
+            <div class="item-left">
+              <span class="item-check">✓</span>
+              <span><strong>${item.qty}x ${item.product.name}</strong> (${item.product.volumeL}L)</span>
+            </div>
+            <span class="item-val">${formatMoney(item.itemTotal)}</span>
+          </li>
+        `;
+      });
+      block3.innerHTML = `
+        <div class="golden-header-bar">
+          <span>🟡 03. BARRIS DE CHOPP ARTESANAL</span>
+          <span class="tag">${beerItems.reduce((acc, i) => acc + (i.product.volumeL * i.qty), 0)} LITROS</span>
+        </div>
+        <ul class="rental-checklist">
+          ${beerHtml}
+        </ul>
+      `;
+      container.appendChild(block3);
+    }
+
+    // BLOCO 4: Extras e Adicionais (se houver)
+    if (extraItems.length > 0) {
+      const block4 = document.createElement('div');
+      block4.className = 'golden-block';
+      let extraHtml = '';
+      extraItems.forEach(item => {
+        extraHtml += `
+          <li class="checklist-item">
+            <div class="item-left">
+              <span class="item-check">✓</span>
+              <span>${item.qty}x ${item.product.name}</span>
+            </div>
+            <span class="item-val">${formatMoney(item.itemTotal)}</span>
+          </li>
+        `;
+      });
+      block4.innerHTML = `
+        <div class="golden-header-bar">
+          <span>🟡 04. ITENS & SERVIÇOS ADICIONAIS</span>
+          <span class="tag">COMPLEMENTOS</span>
+        </div>
+        <ul class="rental-checklist">
+          ${extraHtml}
+        </ul>
+      `;
+      container.appendChild(block4);
+    }
+
+    // BLOCO 5: Ficha Financeira & Condições
+    const block5 = document.createElement('div');
+    block5.className = 'golden-block';
+    block5.innerHTML = `
+      <div class="golden-header-bar">
+        <span>🟡 05. RESUMO DE LOCAÇÃO & CONDIÇÕES</span>
+        <span class="tag">CONDICIONAMENTO</span>
+      </div>
+      <ul class="rental-checklist">
+        <li class="checklist-item">
+          <div class="item-left"><span class="item-check">✓</span><span>Instalação técnica e calibragem de temperatura no local</span></div>
+          <span class="item-val">Incluso</span>
+        </li>
+        <li class="checklist-item">
+          <div class="item-left"><span class="item-check">✓</span><span>Logística de Entrega e Recolhimento (${AppState.event.city})</span></div>
+          <span class="item-val">${deliveryFee > 0 ? formatMoney(deliveryFee) : 'Incluso'}</span>
+        </li>
+        <li class="checklist-item">
+          <div class="item-left"><span class="item-check">✓</span><span>Condição de Reserva: 50% na confirmação + 50% na montagem</span></div>
+          <span class="item-val">PIX / Cartão</span>
+        </li>
+        <li class="checklist-item" style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 6px;">
+          <div class="item-left">
+            <span class="item-check" style="color: var(--color-yellow); font-size: 1.1rem;">●</span>
+            <div>
+              <div style="font-family: var(--font-heading); font-weight: 900; font-size: 0.95rem; color: var(--color-cream); text-transform: uppercase;">Valor Total da Locação</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Sinal de confirmação: ${formatMoney(downPayment)} (50%)</div>
+            </div>
+          </div>
+          <span class="item-val" style="font-family: var(--font-specs); font-size: 1.45rem; font-weight: 900; color: var(--color-yellow);">${formatMoney(grandTotal)}</span>
+        </li>
+      </ul>
+    `;
+    container.appendChild(block5);
+  }
+
+  // Envio Final da Reserva
+  window.submitReservation = function() {
+    if (!validateStep(7)) return;
+
+    const btn = document.getElementById('btnFinalSubmit');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Gravando Reserva...';
+    }
+
+    const payload = {
+      eventDate: AppState.event.date,
+      startTime: AppState.event.startTime,
+      endTime: AppState.event.endTime,
+      cep: AppState.event.cep,
+      address: AppState.event.address,
+      number: AppState.event.number,
+      complement: AppState.event.complement,
+      neighborhood: AppState.event.neighborhood,
+      city: AppState.event.city,
+      state: AppState.event.state,
+      guests: AppState.event.guests,
+      customerName: AppState.customer.name,
+      customerWhatsApp: AppState.customer.whatsapp,
+      customerEmail: AppState.customer.email,
+      needInvoice: AppState.customer.needInvoice,
+      invoiceDoc: AppState.customer.invoiceDoc,
+      notes: AppState.customer.notes,
+      items: Object.entries(AppState.items).map(([pid, qty]) => ({ productId: pid, quantity: qty }))
+    };
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(handleReservationSuccess)
+        .withFailureHandler(err => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Solicitar Reserva →';
+          }
+          showError('Não foi possível gravar a reserva: ' + err.message);
+        })
+        .createReservation(payload);
+    } else {
+      // Simulação local de sucesso
+      setTimeout(() => {
+        handleReservationSuccess({
+          success: true,
+          reservationId: '#GN-' + Math.floor(10000 + Math.random() * 90000),
+          total: document.getElementById('sumGrandTotal').textContent,
+          whatsappUrl: 'https://wa.me/5512999990000?text=' + encodeURIComponent('Olá! Acabei de fazer a reserva de chopp para meu evento.')
+        });
+      }, 1000);
+    }
+  };
+
+  function handleReservationSuccess(res) {
+    if (res.success) {
+      AppState.reservationResult = res;
+      document.getElementById('finalOrderCode').textContent = res.reservationId;
+      document.getElementById('finalOrderTotal').textContent = typeof res.total === 'number' ? formatMoney(res.total) : res.total;
+      
+      const waBtn = document.getElementById('finalWhatsAppBtn');
+      if (waBtn && res.whatsappUrl) {
+        waBtn.href = res.whatsappUrl;
+      }
+
+      goToStep(8);
+    } else {
+      showError(res.error || 'Erro ao processar reserva.');
+    }
+  }
+
+  // Integração com ViaCEP
+  function setupCepLookup() {
+    const cepInput = document.getElementById('eventCep');
+    if (!cepInput) return;
+
+    cepInput.addEventListener('blur', () => {
+      const cleanCep = cepInput.value.replace(/\D/g, '');
+      if (cleanCep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+          .then(r => r.json())
+          .then(data => {
+            if (!data.erro) {
+              document.getElementById('eventAddress').value = data.logradouro || '';
+              document.getElementById('eventNeighborhood').value = data.bairro || '';
+              
+              // Tenta selecionar a cidade na lista de frete
+              const citySel = document.getElementById('eventCity');
+              for (let i = 0; i < citySel.options.length; i++) {
+                if (citySel.options[i].value.toLowerCase().includes(data.localidade.toLowerCase())) {
+                  citySel.selectedIndex = i;
+                  citySel.dispatchEvent(new Event('change'));
+                  break;
+                }
+              }
+            }
+          })
+          .catch(e => console.warn('Falha ViaCEP:', e));
+      }
+    });
+  }
+
+  // Configuração de Event Listeners
+  function setupEventListeners() {
+    const citySel = document.getElementById('eventCity');
+    if (citySel) {
+      citySel.addEventListener('change', () => {
+        const val = citySel.value;
+        const reg = AppState.regions.find(r => r.city === val);
+        AppState.event.deliveryFee = reg ? reg.fee : 0;
+        updateRecalculation();
+      });
+    }
+
+    const nfRadios = document.querySelectorAll('input[name="needNf"]');
+    nfRadios.forEach(radio => {
+      radio.addEventListener('change', e => {
+        const docGroup = document.getElementById('nfDocGroup');
+        if (docGroup) docGroup.style.display = (e.target.value === 'yes') ? 'block' : 'none';
+      });
+    });
+  }
+
+  // Helpers
+  function formatMoney(num) {
+    return 'R$ ' + Number(num || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatDateBR(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('alertBox');
+    if (box) {
+      box.textContent = msg;
+      box.style.display = 'block';
+    }
+  }
+
+  function hideError() {
+    const box = document.getElementById('alertBox');
+    if (box) box.style.display = 'none';
+  }
+</script>

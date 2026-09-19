@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "Lead": {
+      "title": "Lead",
+      "description": "Representa uma solicitação de orçamento de evento.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerEmail": { "type": "string", "format": "email" },
+        "customerWhatsApp": { "type": "string", "pattern": "^\\+?[0-9\\s\\-\\(\\)]{10,20}$" },
+        "contactPreference": { "type": "string", "enum": ["whatsapp", "email", "phone"] },
+        "eventType": { "type": "string", "enum": ["casamento", "aniversário", "corporativo", "particular", "formatura", "festival", "outro"] },
+        "eventDate": { "type": "string", "format": "date" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "city": { "type": "string" },
+            "neighborhood": { "type": "string" },
+            "address": { "type": "string" },
+            "cep": { "type": "string" }
+          }
+        },
+        "guestCount": { "type": "number" },
+        "services": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "additionalInfo": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["novo", "em_contato", "orcamento_enviado", "confirmado", "concluido", "cancelado"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "customerWhatsApp", "eventType", "eventDate", "status", "createdAt"]
+    },
+    "Beer": {
+      "title": "Beer",
+      "description": "Produto de chope artesanal disponível para eventos.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "style": { "type": "string" },
+        "brewery": { "type": "string" },
+        "abv": { "type": "string" },
+        "ibu": { "type": "number" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "quoteOnly": { "type": "boolean" },
+        "image": { "type": "string" },
+        "available": { "type": "boolean" }
+      }
+    },
+    "Tent": {
+      "title": "Tent",
+      "description": "Estrutura de tenda disponível para locação.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "size": { "type": "string" },
+        "capacity": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "price": { "type": "number" },
+        "quoteOnly": { "type": "boolean" },
+        "available": { "type": "boolean" }
+      }
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Configurações globais do sistema.",
+      "type": "object",
+      "properties": {
+        "whatsappNumber": { "type": "string" },
+        "companyName": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "instagramUrl": { "type": "string" },
+        "address": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Coleção de orçamentos recebidos."
+    },
+    "/beers/{beerId}": {
+      "schema": "Beer",
+      "description": "Catálogo de chopes."
+    },
+    "/tents/{tentId}": {
+      "schema": "Tent",
+      "description": "Catálogo de tendas e estruturas."
+    },
+    "/settings/config": {
+      "schema": "Setting",
+      "description": "Configurações da empresa."
+    },
+    "/admins/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["admin"] }
+        }
+      },
+      "description": "Lista de administradores permitidos."
+    }
+  }
+}

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cervejaria Guanandi | Chope Artesanal & Locação de Chopeiras no Litoral Norte</title>
+  <meta name="description" content="Locação de chopeiras elétricas, barris de chopp artesanal, Beer Truck e estrutura para eventos em Caraguatatuba, São Sebastião, Ilhabela e Ubatuba.">
+  <meta property="og:title" content="Cervejaria Guanandi | Chope Artesanal & Locação de Chopeiras no Litoral Norte">
+  <meta property="og:description" content="Atendemos eventos em Caraguatatuba, São Sebastião, Ilhabela e Ubatuba com chope artesanal, chopeiras, barris, Beer Truck e estrutura para festas.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="#" class="brand-logo">
+        <div class="logo-icon">🍺</div>
+        <div>
+          <div class="brand-title">Guanandi</div>
+          <div class="brand-subtitle">Chopp & Eventos</div>
+        </div>
+      </a>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">
+        Atendimento: <strong style="color: var(--accent);">Litoral Norte SP</strong>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stepper de Progresso no Topo -->
+  <nav class="stepper-bar" aria-label="Progresso da Reserva">
+    <div class="stepper-inner">
+      <div class="step-node active" id="stepNode_1">
+        <span class="step-bullet">1</span>
+        <span>Serviços</span>
+      </div>
+      <div class="step-line" id="stepLine_1"></div>
+
+      <div class="step-node" id="stepNode_2">
+        <span class="step-bullet">2</span>
+        <span>Cerveja</span>
+      </div>
+      <div class="step-line" id="stepLine_2"></div>
+
+      <div class="step-node" id="stepNode_3">
+        <span class="step-bullet">3</span>
+        <span>Evento</span>
+      </div>
+      <div class="step-line" id="stepLine_3"></div>
+
+      <div class="step-node" id="stepNode_4">
+        <span class="step-bullet">4</span>
+        <span>Pessoas</span>
+      </div>
+      <div class="step-line" id="stepLine_4"></div>
+
+      <div class="step-node" id="stepNode_5">
+        <span class="step-bullet">5</span>
+        <span>Extras</span>
+      </div>
+      <div class="step-line" id="stepLine_5"></div>
+
+      <div class="step-node" id="stepNode_6">
+        <span class="step-bullet">6</span>
+        <span>Resumo</span>
+      </div>
+      <div class="step-line" id="stepLine_6"></div>
+
+      <div class="step-node" id="stepNode_7">
+        <span class="step-bullet">7</span>
+        <span>Dados</span>
+      </div>
+      <div class="step-line" id="stepLine_7"></div>
+
+      <div class="step-node" id="stepNode_8">
+        <span class="step-bullet">✓</span>
+        <span>Pronto</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Container Principal -->
+  <main class="main-wrapper">
+    <!-- Caixa de Alerta de Validação / Erro -->
+    <div id="alertBox" class="alert-box" role="alert"></div>
+
+    <div class="grid-layout">
+      <!-- Coluna Principal do Fluxo do Cliente -->
+      <section class="wizard-card">
+
+        <!-- PASSO 1: O QUE VOCÊ PRECISA? -->
+        <div id="stepCard_1">
+          <div class="step-header">
+            <div class="step-eyebrow" style="color: var(--color-yellow); font-weight: 800;">Litoral Norte de São Paulo</div>
+            <h1 class="step-title">Chope artesanal e estrutura para eventos no Litoral Norte</h1>
+            <p class="step-description" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+              Atendemos eventos em <strong>Caraguatatuba</strong>, <strong>São Sebastião</strong>, <strong>Ilhabela</strong> e <strong>Ubatuba</strong> com chope artesanal, chopeiras, barris, Beer Truck e estrutura para festas.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 0.8rem; font-family: var(--font-specs); text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px;">
+              O que você precisa para o seu evento? Selecione:
+            </div>
+          </div>
+
+          <div class="category-grid">
+            <div class="selectable-card" id="srvCard_chopeira" onclick="toggleService('chopeira')">
+              <div class="card-top">
+                <div class="card-icon">🍺</div>
+                <div class="card-checkbox">✓</div>
+              </div>
+              <div>
+                <div class="card-label">Chopeira</div>
+                <div class="card-hint">Elétrica 220V ou Caixa Térmica com gelo</div>
+              </div>
+            </div>
+
+            <div class="selectable-card" id="srvCard_beertruck" onclick="toggleService('beertruck')">
+              <div class="card-top">
+                <div class="card-icon">🚚</div>
+                <div class="card-checkbox">✓</div>
+              </div>
+              <div>
+                <div class="card-label">The Beer Truck</div>
+                <div class="card-hint">Van clássica com 4 a 6 torneiras de chopp artesanal</div>
+              </div>
+            </div>
+
+            <div class="selectable-card" id="srvCard_tenda" onclick="toggleService('tenda')">
+              <div class="card-top">
+                <div class="card-icon">⛺</div>
+                <div class="card-checkbox">✓</div>
+              </div>
+              <div>
+                <div class="card-label">Tenda Articulada</div>
+                <div class="card-hint">Proteção impermeável para sol e chuva</div>
+              </div>
+            </div>
+
+            <div class="selectable-card" id="srvCard_pacote" onclick="toggleService('pacote')">
+              <div class="card-top">
+                <div class="card-icon">🎉</div>
+                <div class="card-checkbox">✓</div>
+              </div>
+              <div>
+                <div class="card-label">Pacote para Evento</div>
+                <div class="card-hint">Beer Truck + Tenda + Mesas + Estrutura Completa</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-footer">
+            <div></div>
+            <button type="button" class="btn-primary" onclick="nextStep()">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 2: ESCOLHA SUA CERVEJA -->
+        <div id="stepCard_2" style="display: none;">
+          <div class="step-header">
+            <div class="step-eyebrow">Passo 2 de 7</div>
+            <h2 class="step-title">Escolha seu Chopp</h2>
+            <p class="step-description">Selecione os estilos de cerveja artesanal e o tamanho dos barris (30L ou 50L).</p>
+          </div>
+
+          <div id="beersList">
+            <!-- Injetado dinamicamente via Scripts.html -->
+          </div>
+
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-sm); padding: 12px; margin-top: 18px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">Seu pedido de cerveja:</span>
+            <span id="step2BeerFooterSummary" style="font-weight: 800; color: var(--accent);">0 barris selecionados · R$ 0,00</span>
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" class="btn-secondary" onclick="prevStep()">← Voltar</button>
+            <button type="button" class="btn-primary" onclick="nextStep()">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 3: DATA E LOCAL DO EVENTO -->
+        <div id="stepCard_3" style="display: none;">
+          <div class="step-header">
+            <div class="step-eyebrow">Passo 3 de 7</div>
+            <h2 class="step-title">Quando e onde será seu evento?</h2>
+            <p class="step-description">Necessário no mínimo 7 dias de antecedência para montagem e reserva de barris.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="eventDate">Data do Evento *</label>
+            <input type="date" id="eventDate" class="form-input" required>
+            <small style="color: var(--text-muted); font-size: 0.75rem;">Mínimo de 7 dias de antecedência para garantir disponibilidade de estoque.</small>
+          </div>
+
+          <div class="input-row form-group">
+            <div>
+              <label class="form-label" for="eventStartTime">Horário de Início</label>
+              <input type="time" id="eventStartTime" class="form-input" value="16:00">
+            </div>
+            <div>
+              <label class="form-label" for="eventEndTime">Horário de Término</label>
+              <input type="time" id="eventEndTime" class="form-input" value="23:00">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="eventCep">CEP do Local (Auto-busca)</label>
+            <input type="text" id="eventCep" class="form-input" placeholder="00000-000" maxlength="9">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="eventCity">Cidade / Região (Taxa de Entrega) *</label>
+            <select id="eventCity" class="form-select" required>
+              <option value="">Carregando opções de frete...</option>
+            </select>
+          </div>
+
+          <div class="input-row form-group">
+            <div style="grid-column: span 1;">
+              <label class="form-label" for="eventAddress">Endereço / Rua *</label>
+              <input type="text" id="eventAddress" class="form-input" placeholder="Rua, Avenida..." required>
+            </div>
+            <div>
+              <label class="form-label" for="eventNumber">Número</label>
+              <input type="text" id="eventNumber" class="form-input" placeholder="123">
+            </div>
+          </div>
+
+          <div class="input-row form-group">
+            <div>
+              <label class="form-label" for="eventNeighborhood">Bairro</label>
+              <input type="text" id="eventNeighborhood" class="form-input" placeholder="Bairro">
+            </div>
+            <div>
+              <label class="form-label" for="eventComplement">Complemento</label>
+              <input type="text" id="eventComplement" class="form-input" placeholder="Casa, Sítio, Quiosque...">
+            </div>
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" class="btn-secondary" onclick="prevStep()">← Voltar</button>
+            <button type="button" class="btn-primary" onclick="nextStep()">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 4: NÚMERO DE CONVIDADOS -->
+        <div id="stepCard_4" style="display: none;">
+          <div class="step-header">
+            <div class="step-eyebrow">Passo 4 de 7</div>
+            <h2 class="step-title">Quantas pessoas estarão no evento?</h2>
+            <p class="step-description">Isso nos ajuda a orientar a calibragem do chopp e a quantidade de copos.</p>
+          </div>
+
+          <div class="guest-chips">
+            <div class="chip-btn" id="guestChip_10" onclick="selectGuests(10)">10</div>
+            <div class="chip-btn" id="guestChip_20" onclick="selectGuests(20)">20</div>
+            <div class="chip-btn" id="guestChip_30" onclick="selectGuests(30)">30</div>
+            <div class="chip-btn selected" id="guestChip_50" onclick="selectGuests(50)">50</div>
+            <div class="chip-btn" id="guestChip_80" onclick="selectGuests(80)">80</div>
+            <div class="chip-btn" id="guestChip_100" onclick="selectGuests(100)">100</div>
+            <div class="chip-btn" id="guestChip_150" onclick="selectGuests(150)">150</div>
+            <div class="chip-btn" id="guestChip_200" onclick="selectGuests(200)">200+</div>
+          </div>
+
+          <div class="form-group" style="margin-top: 20px;">
+            <label class="form-label" for="customGuests">Ou digite o número exato:</label>
+            <input type="number" id="customGuests" class="form-input" value="50" min="5" max="2000" onchange="AppState.event.guests = this.value; suggestBeerVolume(this.value)">
+          </div>
+
+          <div id="guestBeerHint" style="font-size: 0.85rem; color: var(--accent); background: var(--accent-glow); padding: 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--accent); margin-top: 14px;">
+            💡 Para 50 pessoas em média 4h a 5h de evento, recomenda-se cerca de 75 Litros (aprox. 2 barris).
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" class="btn-secondary" onclick="prevStep()">← Voltar</button>
+            <button type="button" class="btn-primary" onclick="nextStep()">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 5: EQUIPAMENTOS E SERVIÇOS ADICIONAIS -->
+        <div id="stepCard_5" style="display: none;">
+          <div class="step-header">
+            <div class="step-eyebrow">Passo 5 de 7</div>
+            <h2 class="step-title">Adicione ao seu evento</h2>
+            <p class="step-description">Equipamentos auxiliares, jogos de mesa e serviços de montagem especializada.</p>
+          </div>
+
+          <div id="extrasList">
+            <!-- Injetado dinamicamente via Scripts.html -->
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" class="btn-secondary" onclick="prevStep()">← Voltar</button>
+            <button type="button" class="btn-primary" onclick="nextStep()">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 6: RESUMO DA RESERVA / FICHA DE LOCAÇÃO -->
+        <div id="stepCard_6" style="display: none;">
+          <div class="step-header">
+            <div class="step-eyebrow">Passo 6 de 7</div>
+            <h2 class="step-title">Ficha de Reserva & Locação</h2>
+            <p class="step-description">Confira o checklist estruturado de equipamentos, barris e logística da sua reserva.</p>
+          </div>
+
+          <div id="bookingSheetContainer">
+            <!-- Blocos dourados estruturados e checklist itemizado injetados via Scripts.html -->
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" class="btn-secondary" onclick="prevStep()">← Voltar e Editar</button>
+            <button type="button" class="btn-primary" onclick="nextStep()">Continuar para Dados →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 7: DADOS DO CLIENTE -->
+        <div id="stepCard_7" style="display: none;">
+          <div class="step-header">
+            <div class="step-eyebrow">Passo 7 de 7</div>
+            <h2 class="step-title">Seus dados para a reserva</h2>
+            <p class="step-description">Enviaremos a confirmação e o contrato de locação via WhatsApp e e-mail.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="custName">Nome Completo *</label>
+            <input type="text" id="custName" class="form-input" placeholder="Seu nome ou responsável pelo evento" required>
+          </div>
+
+          <div class="input-row form-group">
+            <div>
+              <label class="form-label" for="custWhats">WhatsApp (com DDD) *</label>
+              <input type="tel" id="custWhats" class="form-input" placeholder="(12) 99999-9999" required>
+            </div>
+            <div>
+              <label class="form-label" for="custEmail">E-mail *</label>
+              <input type="email" id="custEmail" class="form-input" placeholder="seuemail@exemplo.com" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 20px;">
+            <label class="form-label">Você precisa de Nota Fiscal?</label>
+            <div style="display: flex; gap: 20px; margin-top: 8px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="needNf" value="no" checked> Não
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="needNf" id="needInvoiceYes" value="yes"> Sim
+              </label>
+            </div>
+          </div>
+
+          <div id="nfDocGroup" class="form-group" style="display: none;">
+            <label class="form-label" for="invoiceDoc">CPF ou CNPJ para Emissão de NF</label>
+            <input type="text" id="invoiceDoc" class="form-input" placeholder="000.000.000-00 ou 00.000.000/0001-00">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="orderNotes">Observações sobre o evento (opcional)</label>
+            <textarea id="orderNotes" class="form-textarea" rows="3" placeholder="Ex: Entrada pela portaria 2, escadas no local, tomada 220V disponível..."></textarea>
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" class="btn-secondary" onclick="prevStep()">← Voltar</button>
+            <button type="button" class="btn-primary" id="btnFinalSubmit" onclick="submitReservation()">Confirmar Reserva →</button>
+          </div>
+        </div>
+
+        <!-- PASSO 8: CONFIRMAÇÃO DA RESERVA -->
+        <div id="stepCard_8" style="display: none;">
+          <div class="success-card">
+            <div class="success-icon">✓</div>
+            <h2 style="font-size: 1.8rem; font-weight: 900; margin-bottom: 6px;">Reserva Recebida!</h2>
+            <p style="color: var(--text-secondary); max-width: 480px; margin: 0 auto;">
+              Sua solicitação foi registrada no sistema. Nossa equipe técnica está validando a alocação dos equipamentos para a data escolhida.
+            </p>
+
+            <div style="margin: 24px auto; background: var(--bg-main); border: 1px dashed var(--border-accent); border-radius: var(--radius-md); padding: 18px; max-width: 380px;">
+              <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Código da Reserva</div>
+              <div id="finalOrderCode" class="order-number">#GN-00000</div>
+              <div style="font-size: 0.9rem; color: var(--text-secondary);">Valor Total: <strong id="finalOrderTotal" style="color: var(--accent);">R$ 0,00</strong></div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; max-width: 380px; margin: 0 auto;">
+              <a href="#" id="finalWhatsAppBtn" target="_blank" class="btn-primary btn-whatsapp">
+                <span>💬 Abrir Confirmação no WhatsApp</span>
+              </a>
+              <button type="button" class="btn-secondary" onclick="location.reload()">
+                Fazer Outra Reserva
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Sidebar Resumo Fixo (Desktop) -->
+      <aside class="summary-panel" style="display: none;">
+        <h3 class="summary-title">Resumo do Pedido</h3>
+        <div class="summary-row">
+          <span>Subtotal Produtos:</span>
+          <span id="sidebarSubtotal">R$ 0,00</span>
+        </div>
+        <div class="summary-row">
+          <span>Taxa de Entrega:</span>
+          <span id="sidebarDelivery">R$ 0,00</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total:</span>
+          <span class="total-display-val">R$ 0,00</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 14px; line-height: 1.4;">
+          * O valor oficial é recalculado e confirmado pelo backend no Google Sheets.
+        </div>
+      </aside>
+    </div>
+
+    <!-- Rodapé Oficial com ASM Solutions -->
+    <footer style="margin-top: 40px; padding: 24px 16px; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-specs);">
+      <div>
+        © 2026 Cervejaria Guanandi. Desenvolvido por 
+        <a href="https://alansmsolutions.com/" target="_blank" rel="noopener noreferrer" style="color: var(--color-yellow); text-decoration: none; font-weight: 800;">
+          ASM Solutions
+        </a>
+      </div>
+      <div style="font-size: 0.75rem; color: #555; margin-top: 4px;">
+        Dispensadores elétricos, chopp artesanal fresco e estrutura completa para eventos no Litoral Norte SP
+      </div>
+    </footer>
+  </main>
+
+  <!-- Barra Fixa Inferior no Mobile -->
+  <div class="mobile-bottom-bar" id="mobileBottomBar">
+    <div class="mobile-total-box">
+      <span class="mobile-total-label">Total Previsto</span>
+      <span class="mobile-total-value total-display-val">R$ 0,00</span>
+    </div>
+    <button type="button" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem;" onclick="nextStep()">
+      Continuar →
+    </button>
+  </div>
+
+  <?!= include('Scripts'); ?>
+  <script>
+    // Exibe a sidebar em telas grandes
+    if (window.innerWidth >= 850) {
+      const sp = document.querySelector('.summary-panel');
+      if (sp) sp.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

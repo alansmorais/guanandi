@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity Validations
+    function isValidLead(data) {
+      return data.keys().hasAll(['customerName', 'customerWhatsApp', 'eventType', 'eventDate', 'status', 'createdAt'])
+        && data.keys().size() >= 6
+        && data.customerName is string && data.customerName.size() <= 100
+        && data.customerWhatsApp is string && data.customerWhatsApp.size() <= 20
+        && data.eventType in ['casamento', 'aniversário', 'corporativo', 'particular', 'formatura', 'festival', 'outro']
+        && data.status == 'novo'
+        && data.createdAt == request.time;
+    }
+
+    // Collections
+    match /leads/{leadId} {
+      allow create: if isValidLead(incoming());
+      allow get, list, update, delete: if isAdmin();
+    }
+
+    match /beers/{beerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /tents/{tentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /reservations/{reservationId} {
+      allow create: if true; // Public can create reservations
+      allow get, list, update, delete: if isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.token.email == "alanpkmorais@gmail.com";
+      allow write: if false; 
+    }
+  }
+}
