@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cervejaria Guanandi | Redirecionando...</title>
+    <script>
+      // Single Page App redirect for GitHub Pages
+      (function() {
+        var path = window.location.pathname;
+        var segments = path.split('/').filter(Boolean);
+        // If repo path exists (e.g. /my-repo/chope-caraguatatuba)
+        var repoName = segments.length > 0 ? segments[0] : '';
+        var remainingRoute = segments.slice(1).join('/');
+        
+        // Construct the hash route
+        var targetHash = remainingRoute ? '#/' + remainingRoute : '#/';
+        if (window.location.search) {
+          targetHash += window.location.search;
+        }
+        
+        var targetUrl = window.location.origin + (repoName ? '/' + repoName + '/' : '/') + targetHash;
+        window.location.replace(targetUrl);
+      })();
+    </script>
+  </head>
+  <body style="background-color: #0d0d0d; color: #f5f0eb; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+    <div style="text-align: center;">
+      <h2>Cervejaria Guanandi</h2>
+      <p style="color: #cda84e;">Carregando aplicação...</p>
+    </div>
+  </body>
+</html>

@@ -33,9 +33,51 @@ export default function Header() {
           </div>
 
           <div className="hidden lg:flex items-center gap-4 text-xs font-heading font-bold uppercase tracking-wider text-[#A8A39E]">
-            <a href="/#cidades" className="hover:text-brand-yellow transition-colors">Cidades</a>
-            <a href="/#taps" className="hover:text-brand-yellow transition-colors">Taps & Barris</a>
-            <a href="/#equipamentos" className="hover:text-brand-yellow transition-colors">Chopeiras</a>
+            <button 
+              type="button" 
+              onClick={() => {
+                const el = document.getElementById('cidades');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  window.location.hash = '#/';
+                  setTimeout(() => document.getElementById('cidades')?.scrollIntoView({ behavior: 'smooth' }), 150);
+                }
+              }} 
+              className="hover:text-brand-yellow transition-colors cursor-pointer"
+            >
+              Cidades
+            </button>
+            <button 
+              type="button" 
+              onClick={() => {
+                const el = document.getElementById('taps');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  window.location.hash = '#/';
+                  setTimeout(() => document.getElementById('taps')?.scrollIntoView({ behavior: 'smooth' }), 150);
+                }
+              }} 
+              className="hover:text-brand-yellow transition-colors cursor-pointer"
+            >
+              Taps & Barris
+            </button>
+            <button 
+              type="button" 
+              onClick={() => {
+                const el = document.getElementById('equipamentos');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  window.location.hash = '#/';
+                  setTimeout(() => document.getElementById('equipamentos')?.scrollIntoView({ behavior: 'smooth' }), 150);
+                }
+              }} 
+              className="hover:text-brand-yellow transition-colors cursor-pointer"
+            >
+              Chopeiras
+            </button>
           </div>
 
           <Link

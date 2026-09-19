@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import Header from "./components/Header";
 import BeerCatalog from "./components/BeerCatalog";
