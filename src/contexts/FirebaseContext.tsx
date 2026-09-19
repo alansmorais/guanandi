@@ -6,6 +6,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, onAuthStateChanged } from "firebase/auth";
 import { auth, db, doc, getDoc } from "../lib/firebase";
+import { safeStorage } from "../lib/storage";
 
 export interface AdminSlotUser {
   slot: number;
@@ -34,7 +35,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check local admin session
-    const savedSession = localStorage.getItem("guanandi_admin_active_session");
+    const savedSession = safeStorage.getItem("guanandi_admin_active_session");
     if (savedSession) {
       try {
         const parsed = JSON.parse(savedSession);
@@ -42,8 +43,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           setAdminUser(parsed);
           setIsAdmin(true);
         }
-      } catch (e) {
-        localStorage.removeItem("guanandi_admin_active_session");
+      } catch {
+        safeStorage.removeItem("guanandi_admin_active_session");
       }
     }
 
@@ -69,12 +70,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const loginAdminSession = (admin: AdminSlotUser) => {
     setAdminUser(admin);
     setIsAdmin(true);
-    localStorage.setItem("guanandi_admin_active_session", JSON.stringify(admin));
+    safeStorage.setItem("guanandi_admin_active_session", JSON.stringify(admin));
   };
 
   const logoutAdminSession = () => {
     setAdminUser(null);
-    localStorage.removeItem("guanandi_admin_active_session");
+    safeStorage.removeItem("guanandi_admin_active_session");
     if (!user) {
       setIsAdmin(false);
     }

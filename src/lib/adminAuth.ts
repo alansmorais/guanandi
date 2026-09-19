@@ -8,6 +8,8 @@
  * - Telemetria e dados para o Developer Console
  */
 
+import { safeStorage } from "./storage";
+
 export interface AdminAccount {
   slot: number;
   username: string;
@@ -33,14 +35,14 @@ function simpleHash(str: string): string {
 }
 
 export function getInitialAdminAccounts(): AdminAccount[] {
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = safeStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.slice(0, 2); // Garante no máximo 2 usuários
       }
-    } catch (e) {
+    } catch {
       console.warn("Erro ao ler contas admin locais.");
     }
   }
@@ -67,7 +69,7 @@ export function getInitialAdminAccounts(): AdminAccount[] {
     }
   ];
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(initialAccounts));
+  safeStorage.setItem(STORAGE_KEY, JSON.stringify(initialAccounts));
   return initialAccounts;
 }
 
@@ -151,10 +153,10 @@ export function updateAdminPassword(username: string, newPassword: string): {
 function saveAdminAccounts(accounts: AdminAccount[]) {
   // Limita estritamente a 2 usuários
   const limited = accounts.slice(0, 2);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
+  safeStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
 }
 
 export function resetAllAdminPasswordsForDev(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  safeStorage.removeItem(STORAGE_KEY);
   getInitialAdminAccounts();
 }
