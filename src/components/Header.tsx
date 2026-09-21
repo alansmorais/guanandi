@@ -51,32 +51,17 @@ export default function Header() {
             <button 
               type="button" 
               onClick={() => {
-                const el = document.getElementById('taps');
+                const el = document.getElementById('booking-panel');
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth' });
                 } else {
                   window.location.hash = '#/';
-                  setTimeout(() => document.getElementById('taps')?.scrollIntoView({ behavior: 'smooth' }), 150);
+                  setTimeout(() => document.getElementById('booking-panel')?.scrollIntoView({ behavior: 'smooth' }), 150);
                 }
               }} 
               className="hover:text-brand-yellow transition-colors cursor-pointer"
             >
-              Taps & Barris
-            </button>
-            <button 
-              type="button" 
-              onClick={() => {
-                const el = document.getElementById('equipamentos');
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                  window.location.hash = '#/';
-                  setTimeout(() => document.getElementById('equipamentos')?.scrollIntoView({ behavior: 'smooth' }), 150);
-                }
-              }} 
-              className="hover:text-brand-yellow transition-colors cursor-pointer"
-            >
-              Chopeiras
+              Reservar Chopp
             </button>
           </div>
 

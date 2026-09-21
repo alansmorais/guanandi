@@ -1,241 +1,561 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
+ * 
+ * Gestão de Reservas — Painel Administrativo Cervejaria Guanandi
+ * - Visualização detalhada de primeira e segunda cerveja (upsell)
+ * - Exibição de horário, quantidade de convidados e endereço
+ * - Atualização e cancelamento de reservas via API backend segura
+ * - Busca por cliente, telefone, e-mail, código e filtros por status e data
  */
 
-import { useEffect, useState } from "react";
-import { collection, onSnapshot, updateDoc, doc, deleteDoc } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
-import { useFirebase } from "../../contexts/FirebaseContext";
-import { Reservation } from "../../types";
-import { Search, Filter, MoreHorizontal, Calendar, CreditCard, Mail, Phone, Trash2, CheckCircle, Clock, XCircle, Send } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { 
+  Search, 
+  Filter, 
+  Calendar, 
+  CreditCard, 
+  Mail, 
+  Phone, 
+  Trash2, 
+  CheckCircle, 
+  Clock, 
+  XCircle, 
+  Sparkles, 
+  Users, 
+  MapPin, 
+  AlertCircle,
+  RefreshCw,
+  FileText,
+  Check
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Reservation } from "../../types";
+import { 
+  fetchAdminReservations, 
+  updateReservationStatusApi, 
+  deleteReservationApi 
+} from "../../lib/api";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 
-const STATUS_CONFIG = {
-  pendente: { label: "Pendente", color: "bg-blue-500/10 border-blue-500/20 text-blue-500", icon: Clock },
-  confirmada: { label: "Confirmada", color: "bg-brand-green/10 border-brand-green/20 text-brand-green", icon: CheckCircle },
-  concluida: { label: "Concluída", color: "bg-white/5 border-white/10 text-white/40", icon: CheckCircle },
-  cancelada: { label: "Cancelada", color: "bg-red-500/10 border-red-500/20 text-red-500", icon: XCircle },
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
+  pendente: { label: "Pendente", color: "bg-amber-500/10 border-amber-500/30 text-amber-400", icon: Clock },
+  confirmada: { label: "Confirmada", color: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400", icon: CheckCircle },
+  concluida: { label: "Concluída", color: "bg-blue-500/10 border-blue-500/30 text-blue-400", icon: Check },
+  cancelada: { label: "Cancelada", color: "bg-red-500/10 border-red-500/30 text-red-400", icon: XCircle },
 };
 
 export default function AdminReservations() {
-  const { isAdmin } = useFirebase();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [selectedRes, setSelectedRes] = useState<Reservation | null>(null);
-  const [filter, setFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [dateFilter, setDateFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Carrega reservas do backend
+  const loadReservations = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchAdminReservations();
+      if (res.reservations) {
+        setReservations(res.reservations);
+        if (selectedRes) {
+          const updatedSelected = res.reservations.find(r => r.id === selectedRes.id);
+          if (updatedSelected) setSelectedRes(updatedSelected);
+        }
+      }
+    } catch (e) {
+      console.warn("Falha ao buscar reservas via API, tentando sincronização local:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!isAdmin) return;
+    loadReservations();
 
-    const unsubscribe = onSnapshot(
-      collection(db, "reservations"), 
-      (snapshot) => {
+    // Sincronização em tempo real caso o Firestore esteja configurado
+    try {
+      const unsubscribe = onSnapshot(collection(db, "reservations"), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Reservation));
-        setReservations(data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
-      },
-      (error) => {
-        console.error("Reservations listener error:", error);
-      }
-    );
-    return () => unsubscribe();
-  }, [isAdmin]);
+        if (data.length > 0) {
+          setReservations(data.sort((a, b) => {
+            const dateA = a.createdAt?.seconds || new Date(a.createdAt || 0).getTime();
+            const dateB = b.createdAt?.seconds || new Date(b.createdAt || 0).getTime();
+            return Number(dateB) - Number(dateA);
+          }));
+        }
+      }, (err) => {
+        // Ignora caso offline ou regras restrinjam
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      // noop
+    }
+  }, []);
 
-  const updateStatus = async (id: string, status: Reservation["status"]) => {
+  const handleUpdateStatus = async (id: string, newStatus: Reservation["status"]) => {
+    setIsUpdating(true);
+    setFeedbackMsg(null);
     try {
-      await updateDoc(doc(db, "reservations", id), { status, updatedAt: new Date() });
-      if (selectedRes?.id === id) {
-        setSelectedRes({ ...selectedRes, status });
+      const res = await updateReservationStatusApi(id, newStatus);
+      if (res.success && res.reservation) {
+        setReservations(prev => prev.map(r => r.id === id ? res.reservation! : r));
+        setSelectedRes(res.reservation);
+        setFeedbackMsg({ type: "success", text: `Status alterado para "${STATUS_CONFIG[newStatus].label}" com sucesso!` });
+      } else {
+        throw new Error(res.error || "Erro ao atualizar status.");
       }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
+    } catch (err: any) {
+      setFeedbackMsg({ type: "error", text: err.message || "Não foi possível atualizar o status." });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const deleteReservation = async (id: string) => {
-    if (!confirm("Excluir esta reserva permanentemente?")) return;
+  const handleCancelReservation = async (id: string) => {
+    if (!window.confirm("Deseja realmente marcar esta reserva como CANCELADA?")) return;
+    await handleUpdateStatus(id, "cancelada");
+  };
+
+  const handleDeletePermanent = async (id: string) => {
+    if (!window.confirm("Atenção: Deseja EXCLUIR permanentemente esta reserva do banco de dados?")) return;
     try {
-      await deleteDoc(doc(db, "reservations", id));
-      setSelectedRes(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
+      await deleteReservationApi(id);
+      setReservations(prev => prev.filter(r => r.id !== id));
+      if (selectedRes?.id === id) setSelectedRes(null);
+      setFeedbackMsg({ type: "success", text: "Reserva excluída com sucesso." });
+    } catch (err: any) {
+      setFeedbackMsg({ type: "error", text: err.message || "Erro ao excluir reserva." });
     }
   };
 
-  const filtered = reservations.filter(res => {
-    const matchesFilter = filter === "todos" || res.status === filter;
-    const matchesSearch = res.customerName.toLowerCase().includes(search.toLowerCase()) || 
-                          res.beerName.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  // Filtros combinados: Status, Data e Busca textual
+  const filteredReservations = useMemo(() => {
+    return reservations.filter((res) => {
+      const matchesStatus = statusFilter === "todos" || res.status === statusFilter;
+      const matchesDate = !dateFilter || res.eventDate === dateFilter;
+
+      const q = search.toLowerCase();
+      const matchesSearch = 
+        !search ||
+        res.customerName?.toLowerCase().includes(q) ||
+        res.customerWhatsApp?.toLowerCase().includes(q) ||
+        res.customerEmail?.toLowerCase().includes(q) ||
+        res.beerName?.toLowerCase().includes(q) ||
+        (res.secondBeer && res.secondBeer.beerName?.toLowerCase().includes(q)) ||
+        (res.reservationCode && res.reservationCode.toLowerCase().includes(q));
+
+      return matchesStatus && matchesDate && matchesSearch;
+    });
+  }, [reservations, statusFilter, dateFilter, search]);
 
   return (
-    <div className="h-full flex flex-col gap-8">
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-white/5 border border-white/10 p-4">
-        <div className="relative flex-grow max-w-md w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-          <input 
-            type="text" 
-            placeholder="Buscar por cliente ou chopp..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-brand-black border border-white/10 pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-brand-yellow transition-colors"
-          />
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#222] pb-5">
+        <div>
+          <h1 className="font-heading font-black text-2xl uppercase tracking-wider text-white">
+            Gestão de Reservas
+          </h1>
+          <p className="text-xs text-[#888] font-body">
+            Acompanhe pedidos, barris, opções de pós-venda (2ª cerveja) e status de confirmação.
+          </p>
         </div>
-        <div className="flex gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
-          {["todos", ...Object.keys(STATUS_CONFIG)].map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={`px-4 py-2 font-display text-[10px] font-black uppercase tracking-widest whitespace-nowrap border transition-all ${
-                filter === s ? "bg-brand-yellow text-brand-black border-brand-yellow" : "bg-white/5 text-white/40 border-white/5 hover:border-white/20"
-              }`}
-            >
-              {s === "todos" ? "Todas" : STATUS_CONFIG[s as keyof typeof STATUS_CONFIG].label}
-            </button>
-          ))}
+
+        <button
+          onClick={loadReservations}
+          disabled={isLoading}
+          className="self-start sm:self-auto flex items-center gap-2 px-3 py-1.5 bg-[#181818] border border-[#2D2D2D] text-xs font-heading font-bold uppercase text-[#CCC] hover:text-white hover:border-[#444] rounded transition-colors"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-brand-yellow" : ""}`} />
+          <span>Atualizar Lista</span>
+        </button>
+      </div>
+
+      {/* Notifications feedback */}
+      {feedbackMsg && (
+        <div className={`p-3 rounded-lg border text-xs flex items-center justify-between ${
+          feedbackMsg.type === "success" 
+            ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-300" 
+            : "bg-red-950/40 border-red-800/60 text-red-300"
+        }`}>
+          <span>{feedbackMsg.text}</span>
+          <button onClick={() => setFeedbackMsg(null)} className="text-xs font-bold underline ml-2">Fechar</button>
+        </div>
+      )}
+
+      {/* Filters Bar */}
+      <div className="bg-[#121212] border border-[#242424] rounded-lg p-4 space-y-3">
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* Text Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666]" />
+            <input
+              type="text"
+              placeholder="Buscar por cliente, e-mail, telefone, chopp ou código (#GN-)..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-[#0A0A0A] border border-[#2E2E2E] rounded pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-brand-yellow font-body transition-colors"
+            />
+          </div>
+
+          {/* Date Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-specs text-[#888] whitespace-nowrap">Data do Evento:</label>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-[#0A0A0A] border border-[#2E2E2E] rounded px-2.5 py-1.5 text-xs text-brand-cream focus:outline-none focus:border-brand-yellow font-specs"
+            />
+            {dateFilter && (
+              <button 
+                onClick={() => setDateFilter("")}
+                className="text-[11px] text-brand-yellow underline font-specs"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
+          <button
+            onClick={() => setStatusFilter("todos")}
+            className={`px-3 py-1 rounded text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+              statusFilter === "todos"
+                ? "bg-brand-yellow text-brand-black"
+                : "bg-[#181818] text-[#888] hover:text-white"
+            }`}
+          >
+            Todas ({reservations.length})
+          </button>
+
+          {Object.keys(STATUS_CONFIG).map((st) => {
+            const count = reservations.filter(r => r.status === st).length;
+            const isSelected = statusFilter === st;
+            return (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1 rounded text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  isSelected
+                    ? "bg-brand-yellow text-brand-black"
+                    : "bg-[#181818] text-[#888] hover:text-white"
+                }`}
+              >
+                <span>{STATUS_CONFIG[st].label}</span>
+                <span className="text-[10px] font-specs opacity-75">({count})</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
-        <div className="lg:col-span-8 bg-white/5 border border-white/10 overflow-hidden flex flex-col">
+      {/* Main Grid: Reservations Table + Selected Details Drawer */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Table List (8 cols) */}
+        <div className="lg:col-span-7 xl:col-span-8 bg-[#121212] border border-[#242424] rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 bg-white/5">
-                  <th className="p-6 font-display text-[10px] font-black uppercase text-white/40 tracking-widest">Cliente</th>
-                  <th className="p-6 font-display text-[10px] font-black uppercase text-white/40 tracking-widest">Chopp / Barril</th>
-                  <th className="p-6 font-display text-[10px] font-black uppercase text-white/40 tracking-widest">Data</th>
-                  <th className="p-6 font-display text-[10px] font-black uppercase text-white/40 tracking-widest">Total</th>
-                  <th className="p-6 font-display text-[10px] font-black uppercase text-white/40 tracking-widest">Status</th>
+                <tr className="bg-[#181818] border-b border-[#262626] text-[10px] font-specs font-bold uppercase text-[#888] tracking-wider">
+                  <th className="py-3 px-4">Código / Cliente</th>
+                  <th className="py-3 px-3">Chopes Escolhidos</th>
+                  <th className="py-3 px-3">Data / Hora</th>
+                  <th className="py-3 px-3">Total</th>
+                  <th className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {filtered.map((res) => (
-                  <tr 
-                    key={res.id} 
-                    className={`hover:bg-white/5 transition-colors cursor-pointer group ${selectedRes?.id === res.id ? "bg-white/10" : ""}`}
-                    onClick={() => setSelectedRes(res)}
-                  >
-                    <td className="p-6">
-                      <div className="font-display text-sm font-black uppercase text-white group-hover:text-brand-yellow">{res.customerName}</div>
-                      <div className="font-body text-[10px] text-white/30 uppercase tracking-tight">{res.customerWhatsApp}</div>
-                    </td>
-                    <td className="p-6">
-                      <div className="font-display text-xs font-black uppercase text-white">{res.beerName}</div>
-                      <div className="font-display text-[10px] text-white/40 uppercase">{res.kegSize}L (x{res.quantity})</div>
-                    </td>
-                    <td className="p-6 text-white font-display text-sm font-black">
-                      {res.eventDate ? format(new Date(res.eventDate), "dd/MM/yy") : "N/D"}
-                    </td>
-                    <td className="p-6 text-brand-yellow font-display text-sm font-black">
-                      R$ {res.totalPrice?.toLocaleString('pt-BR')},00
-                    </td>
-                    <td className="p-6">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1 text-[9px] font-black uppercase border ${STATUS_CONFIG[res.status].color}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {STATUS_CONFIG[res.status].label}
-                      </div>
+              <tbody className="divide-y divide-[#1F1F1F] text-xs font-body">
+                {filteredReservations.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-[#666]">
+                      Nenhuma reserva encontrada para os filtros selecionados.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredReservations.map((res) => {
+                    const isSelected = selectedRes?.id === res.id;
+                    const stConfig = STATUS_CONFIG[res.status] || STATUS_CONFIG.pendente;
+                    const StatusIcon = stConfig.icon;
+
+                    return (
+                      <tr
+                        key={res.id}
+                        onClick={() => setSelectedRes(res)}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected ? "bg-brand-yellow/10" : "hover:bg-[#181818]"
+                        }`}
+                      >
+                        {/* Cliente */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-specs font-black text-brand-yellow text-[11px]">
+                              {res.reservationCode || `#GN-${res.id?.slice(-4)}`}
+                            </span>
+                          </div>
+                          <div className="font-heading font-black text-brand-cream text-xs uppercase">
+                            {res.customerName}
+                          </div>
+                          <div className="text-[11px] text-[#777] font-specs">
+                            {res.customerWhatsApp}
+                          </div>
+                        </td>
+
+                        {/* Chopes & 2ª Cerveja */}
+                        <td className="py-3 px-3">
+                          <div className="font-heading font-bold text-white text-xs">
+                            {res.beerName} ({res.kegSize}L)
+                          </div>
+                          {res.secondBeerAdded && res.secondBeer ? (
+                            <div className="flex items-center gap-1 text-[11px] text-brand-yellow font-specs mt-0.5">
+                              <Sparkles className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">2ª: {res.secondBeer.beerName} ({res.secondBeer.kegSize}L)</span>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-[#555] italic">Única cerveja</div>
+                          )}
+                        </td>
+
+                        {/* Data / Hora */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="text-white font-specs font-bold text-xs">
+                            {res.eventDate ? format(new Date(res.eventDate + 'T00:00:00'), "dd/MM/yyyy") : "A definir"}
+                          </div>
+                          <div className="text-[11px] text-[#888] flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#666]" />
+                            <span>{res.eventTime || "14:00"}</span>
+                          </div>
+                        </td>
+
+                        {/* Total */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="font-specs font-black text-brand-yellow text-xs">
+                            R$ {res.totalPrice?.toLocaleString('pt-BR')},00
+                          </div>
+                          <div className="text-[10px] text-[#666]">
+                            {res.guestCount || 40} pessoas
+                          </div>
+                        </td>
+
+                        {/* Status badge */}
+                        <td className="py-3 px-4 text-center whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-specs font-bold uppercase border ${stConfig.color}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            <span>{stConfig.label}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-brand-black border border-white/10 flex flex-col min-h-[600px]">
+        {/* Selected Reservation Detail Card (4 cols) */}
+        <div className="lg:col-span-5 xl:col-span-4 bg-[#141414] border border-[#242424] rounded-lg p-5 flex flex-col space-y-4">
           {selectedRes ? (
-            <div className="flex flex-col h-full">
-              <div className="p-8 border-b border-white/5 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="w-16 h-16 bg-brand-yellow rounded-full flex items-center justify-center font-display font-black text-brand-black text-2xl">
-                    {selectedRes.customerName.charAt(0)}
-                  </div>
-                  <button onClick={() => deleteReservation(selectedRes.id!)} className="text-white/20 hover:text-red-500 transition-colors">
-                    <Trash2 className="w-5 h-5" />
+            <div className="space-y-4 flex-1">
+              {/* Header card */}
+              <div className="border-b border-[#262626] pb-3 flex items-start justify-between">
+                <div>
+                  <span className="font-specs font-black text-brand-yellow text-sm bg-brand-yellow/10 px-2 py-0.5 rounded border border-brand-yellow/20">
+                    {selectedRes.reservationCode || `#GN-${selectedRes.id?.slice(-4)}`}
+                  </span>
+                  <h3 className="font-heading font-black text-lg text-white uppercase mt-1.5">
+                    {selectedRes.customerName}
+                  </h3>
+                </div>
+
+                <button
+                  onClick={() => handleDeletePermanent(selectedRes.id!)}
+                  title="Excluir do banco de dados"
+                  className="text-[#666] hover:text-red-400 p-1 rounded transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Status Update Control */}
+              <div className="bg-[#191919] border border-[#2D2D2D] rounded-lg p-3 space-y-2">
+                <span className="text-[11px] font-heading font-bold uppercase text-[#888] block">
+                  Status Atual & Ações
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => handleUpdateStatus(selectedRes.id!, "confirmada")}
+                    disabled={isUpdating || selectedRes.status === "confirmada"}
+                    className={`py-1.5 px-2 rounded text-[10px] font-heading font-black uppercase flex items-center justify-center gap-1 transition-all ${
+                      selectedRes.status === "confirmada"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-[#252525] text-[#AAA] hover:text-emerald-300 hover:bg-emerald-950/40"
+                    }`}
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Confirmar</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleUpdateStatus(selectedRes.id!, "concluida")}
+                    disabled={isUpdating || selectedRes.status === "concluida"}
+                    className={`py-1.5 px-2 rounded text-[10px] font-heading font-black uppercase flex items-center justify-center gap-1 transition-all ${
+                      selectedRes.status === "concluida"
+                        ? "bg-blue-600 text-white"
+                        : "bg-[#252525] text-[#AAA] hover:text-blue-300 hover:bg-blue-950/40"
+                    }`}
+                  >
+                    <Check className="w-3 h-3" />
+                    <span>Concluir</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleUpdateStatus(selectedRes.id!, "pendente")}
+                    disabled={isUpdating || selectedRes.status === "pendente"}
+                    className={`py-1.5 px-2 rounded text-[10px] font-heading font-black uppercase flex items-center justify-center gap-1 transition-all ${
+                      selectedRes.status === "pendente"
+                        ? "bg-amber-600 text-white"
+                        : "bg-[#252525] text-[#AAA] hover:text-amber-300 hover:bg-amber-950/40"
+                    }`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>Pendente</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleCancelReservation(selectedRes.id!)}
+                    disabled={isUpdating || selectedRes.status === "cancelada"}
+                    className={`py-1.5 px-2 rounded text-[10px] font-heading font-black uppercase flex items-center justify-center gap-1 transition-all ${
+                      selectedRes.status === "cancelada"
+                        ? "bg-red-600 text-white"
+                        : "bg-[#252525] text-[#AAA] hover:text-red-400 hover:bg-red-950/40"
+                    }`}
+                  >
+                    <XCircle className="w-3 h-3" />
+                    <span>Cancelar</span>
                   </button>
                 </div>
-                <h3 className="font-display text-2xl font-black uppercase text-white">{selectedRes.customerName}</h3>
               </div>
 
-              <div className="p-8 flex-grow space-y-8 overflow-y-auto">
-                <div className="space-y-4">
-                  <h4 className="font-display text-[10px] font-black uppercase text-brand-yellow tracking-[0.2em] border-b border-white/5 pb-2">Itens da Reserva</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between font-display text-xs">
-                      <span className="text-white/30 uppercase">Produto:</span>
-                      <span className="text-white font-black uppercase">{selectedRes.beerName}</span>
-                    </div>
-                    <div className="flex justify-between font-display text-xs">
-                      <span className="text-white/30 uppercase">Configuração:</span>
-                      <span className="text-white font-black">{selectedRes.kegSize}L (x{selectedRes.quantity})</span>
-                    </div>
-                    <div className="flex justify-between font-display text-xs">
-                      <span className="text-white/30 uppercase">Valor dos Itens:</span>
-                      <span className="text-white font-black">R$ {(selectedRes.totalPrice - (selectedRes.logisticsFee || 0)).toLocaleString('pt-BR')},00</span>
-                    </div>
-                    <div className="flex justify-between font-display text-xs">
-                      <span className="text-white/30 uppercase">Taxa Logística:</span>
-                      <span className="text-white font-black">R$ {selectedRes.logisticsFee?.toLocaleString('pt-BR')},00</span>
-                    </div>
-                    <div className="flex justify-between font-display text-sm pt-2 border-t border-white/5">
-                      <span className="text-white/60 uppercase font-black">Total:</span>
-                      <span className="text-brand-yellow font-black">R$ {selectedRes.totalPrice?.toLocaleString('pt-BR')},00</span>
-                    </div>
+              {/* Data & Horário & Convidados */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-[10px] font-specs font-bold uppercase text-[#888] block">
+                  Informações do Evento
+                </span>
+                <div className="bg-[#181818] p-2.5 rounded border border-[#282828] space-y-1 text-brand-cream">
+                  <div className="flex justify-between">
+                    <span className="text-[#888]">Data:</span>
+                    <strong className="text-white">
+                      {selectedRes.eventDate ? format(new Date(selectedRes.eventDate + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR }) : "A definir"}
+                    </strong>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-display text-[10px] font-black uppercase text-brand-yellow tracking-[0.2em] border-b border-white/5 pb-2">Logística & Entrega</h4>
-                  <div className="space-y-3 font-display text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-white/30 uppercase">Data:</span>
-                      <span className="text-white font-black">{selectedRes.eventDate ? format(new Date(selectedRes.eventDate), "EEEE, dd 'de' MMMM", { locale: ptBR }) : "N/D"}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-white/30 uppercase">Endereço:</span>
-                      <span className="text-white font-black">{selectedRes.location.address}</span>
-                      <span className="text-white/60 text-[10px]">{selectedRes.location.neighborhood}, {selectedRes.location.city}</span>
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#888]">Horário:</span>
+                    <strong className="text-white">{selectedRes.eventTime || "14:00"}</strong>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <a href={`https://wa.me/${selectedRes.customerWhatsApp.replace(/\D/g, '')}`} target="_blank" className="flex items-center justify-center gap-2 bg-[#25D366]/10 border border-[#25D366]/20 py-4 text-[#25D366] font-display text-[10px] font-black uppercase tracking-widest hover:bg-[#25D366]/20 transition-all">
-                    <Phone className="w-4 h-4" /> WhatsApp
-                  </a>
-                  <a href={`mailto:${selectedRes.customerEmail}`} className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-4 text-white/60 font-display text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                    <Mail className="w-4 h-4" /> E-mail
-                  </a>
+                  <div className="flex justify-between">
+                    <span className="text-[#888]">Estimativa de Convidados:</span>
+                    <strong className="text-brand-yellow">{selectedRes.guestCount || 40} pessoas</strong>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-8 border-t border-white/5 space-y-4 bg-white/5">
-                <h4 className="font-display text-[10px] font-black uppercase text-white tracking-widest">Gestão de Status</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(STATUS_CONFIG) as Reservation["status"][]).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => updateStatus(selectedRes.id!, s)}
-                      className={`flex items-center gap-2 px-3 py-2 text-[9px] font-black uppercase border transition-all ${
-                        selectedRes.status === s 
-                          ? STATUS_CONFIG[s].color 
-                          : "bg-brand-black text-white/30 border-white/5 hover:border-white/20"
-                      }`}
-                    >
-                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                      {STATUS_CONFIG[s].label}
-                    </button>
-                  ))}
+              {/* Chopes / Produtos */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-[10px] font-specs font-bold uppercase text-[#888] block">
+                  Chopes & Barris
+                </span>
+                <div className="bg-[#181818] p-2.5 rounded border border-[#282828] space-y-2">
+                  {/* Cerveja 1 */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-white font-bold block">{selectedRes.beerName}</span>
+                      <span className="text-[11px] text-[#888]">Barril {selectedRes.kegSize}L (Qtd: {selectedRes.quantity || 1})</span>
+                    </div>
+                    <span className="text-[10px] bg-brand-yellow/10 text-brand-yellow px-1.5 py-0.5 rounded font-specs">
+                      1ª Cerveja
+                    </span>
+                  </div>
+
+                  {/* Cerveja 2 (Upsell) */}
+                  {selectedRes.secondBeerAdded && selectedRes.secondBeer ? (
+                    <div className="pt-2 border-t border-[#262626] flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-1 text-brand-yellow font-bold">
+                          <Sparkles className="w-3 h-3" />
+                          <span>{selectedRes.secondBeer.beerName}</span>
+                        </div>
+                        <span className="text-[11px] text-[#888]">
+                          Barril {selectedRes.secondBeer.kegSize}L (Upsell Pós-Venda)
+                        </span>
+                      </div>
+                      <span className="font-specs font-bold text-brand-yellow">
+                        + R$ {selectedRes.secondBeer.price?.toLocaleString('pt-BR')},00
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="pt-1 text-[11px] text-[#666] italic">
+                      Segunda cerveja não selecionada
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Localização & Contatos */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-[10px] font-specs font-bold uppercase text-[#888] block">
+                  Contato & Local de Entrega
+                </span>
+                <div className="bg-[#181818] p-2.5 rounded border border-[#282828] space-y-1.5 text-brand-cream">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-brand-yellow flex-shrink-0" />
+                    <span>{selectedRes.customerWhatsApp}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-brand-yellow flex-shrink-0" />
+                    <span className="break-all">{selectedRes.customerEmail || "Não informado"}</span>
+                  </div>
+                  <div className="flex items-start gap-2 pt-1 border-t border-[#262626]">
+                    <MapPin className="w-3.5 h-3.5 text-brand-yellow flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div>{selectedRes.location?.address}</div>
+                      <div className="text-[11px] text-[#888]">{selectedRes.location?.neighborhood} — {selectedRes.location?.city}</div>
+                    </div>
+                  </div>
+                  {selectedRes.notes && (
+                    <div className="pt-1 text-[11px] text-[#AAA] border-t border-[#262626]">
+                      <strong>Obs:</strong> {selectedRes.notes}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Total Financeiro */}
+              <div className="bg-[#191919] p-3 rounded-lg border border-[#2D2D2D] flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-specs uppercase text-[#888] block">Valor Total</span>
+                  <span className="text-[11px] text-[#AAA]">
+                    Sinal 50%: R$ {Math.round((selectedRes.totalPrice || 0) * 0.5).toLocaleString('pt-BR')},00
+                  </span>
+                </div>
+                <span className="font-specs font-black text-xl text-brand-yellow">
+                  R$ {selectedRes.totalPrice?.toLocaleString('pt-BR')},00
+                </span>
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-4">
-              <Calendar className="w-12 h-12 text-white/5" />
-              <div className="font-display text-[10px] font-black uppercase text-white/20 tracking-[0.2em]">Selecione uma reserva para ver os detalhes</div>
+            <div className="h-full flex flex-col items-center justify-center text-center p-8 text-[#666] space-y-2">
+              <FileText className="w-10 h-10 text-[#444]" />
+              <p className="text-xs">Selecione uma reserva ao lado para visualizar os detalhes completos e gerenciar o status.</p>
             </div>
           )}
         </div>

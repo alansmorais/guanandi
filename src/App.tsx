@@ -6,8 +6,6 @@
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import Header from "./components/Header";
-import BeerCatalog from "./components/BeerCatalog";
-import EquipmentCatalog from "./components/EquipmentCatalog";
 import Footer from "./components/Footer";
 import BookingWizard from "./components/BookingWizard";
 import AdminLogin from "./components/admin/AdminLogin";
@@ -157,10 +155,6 @@ function LandingPage() {
             <BookingWizard />
           </div>
         </section>
-
-        {/* Compact Reference Catalogs */}
-        <BeerCatalog />
-        <EquipmentCatalog />
 
         {/* Local SEO Section with Real Content and FAQs */}
         <div id="cidades">

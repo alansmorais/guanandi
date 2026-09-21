@@ -36,13 +36,28 @@ export interface Equipment {
 
 export interface Reservation {
   id?: string;
+  reservationCode?: string;
   beerId: string;
   beerName: string;
   kegSize: 30 | 50;
   quantity: number;
   totalPrice: number;
   logisticsFee: number;
+  extractorOption?: string;
+  extractorFee?: number;
   eventDate: string;
+  eventTime: string;
+  guestCount: number;
+  notes?: string;
+  secondBeerAdded?: boolean;
+  secondBeer?: {
+    beerId: string;
+    beerName: string;
+    kegSize: 30 | 50;
+    price: number;
+    quantity: number;
+  } | null;
+  secondBeerPrice?: number;
   customerName: string;
   customerWhatsApp: string;
   customerEmail: string;
@@ -53,6 +68,7 @@ export interface Reservation {
   };
   status: "pendente" | "confirmada" | "cancelada" | "concluida";
   createdAt: any;
+  emailNotificationSent?: boolean;
 }
 
 export interface Lead {
